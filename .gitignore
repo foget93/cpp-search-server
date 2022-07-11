@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+*.Debug
+*.Release
+*.user
+Makefile
+.qmake.stash
+.qtc_clangd/
