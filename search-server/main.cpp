@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 
 using namespace std;
 
@@ -47,10 +48,7 @@ struct Document {
     int relevance;
 };
 
-/*
- bool HasDocumentGreaterRelevance(const Document& lhs, const Document& rhs) {
-    return lhs.relevance > rhs.relevance;
-}*/
+
 
 class SearchServer {
 public:
@@ -59,19 +57,23 @@ public:
             stop_words_.insert(word);
         }
     }
-
+//map<string, set<int>> word_to_documents_;
     void AddDocument(int document_id, const string& document) {
         const vector<string> words = SplitIntoWordsNoStop(document);
-        documents_.push_back({document_id, words});
+        //documents_.push_back({document_id, words});
+        for ( const auto& word : words) {
+            word_to_documents_[word].insert(document_id); //Вставьте в множество документов, соответствующих очередному слову документа, id вставляемого документа. Так очередной документ будет добавлен в инвертированный индекс.
+        }
+        //word_to_documents_
     }
 
-    vector<Document> FindTopDocuments(const string& raw_query) const{
-        const set<string> query_words = ParseQuery(raw_query);
-        auto matched_documents = FindAllDocuments(query_words);
+    vector<Document> FindTopDocuments(const string& raw_query) const {
+        const Query query = ParseQuery(raw_query);
+        auto matched_documents = FindAllDocuments(query);
 
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
-                return lhs.relevance > rhs.relevance; //лямбдачка
+                return lhs.relevance > rhs.relevance;
         });
 
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
@@ -81,16 +83,20 @@ public:
     }
 
 private:
-    struct DocumentContent {
-        int id = 0;
-        vector<string> words;
+    struct QueryWord {
+        string data;
+        bool is_minus;
+        bool is_stop;
     };
-
-    vector<DocumentContent> documents_;
-
+    struct Query {
+        set<string> plus_words;
+        set<string> minus_words;
+    };
+    map<string, set<int>> word_to_documents_; // word +  инвертированный индекс документа
     set<string> stop_words_;
 
-    bool IsStopWord(const string& word) const{
+    //============methods================================================
+    bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
     }
 
@@ -104,39 +110,67 @@ private:
         return words;
     }
 
-    set<string> ParseQuery(const string& text) const{
-        set<string> query_words;
-        for (const string& word : SplitIntoWordsNoStop(text)) {
-            query_words.insert(word);
+
+    QueryWord ParseQueryWord(string text) const {
+        bool is_minus {false};
+
+        if (text[0] == '-') {
+            is_minus = true;
+            text = text.substr(1);
         }
-        return query_words;
+        return {text, is_minus, IsStopWord(text)};
     }
 
-    vector<Document> FindAllDocuments(const set<string>& query_words) const{
-        vector<Document> matched_documents;
-        for (const auto& document : documents_) {
-            const int relevance = MatchDocument(document, query_words);
-            if (relevance > 0) {
-                matched_documents.push_back({document.id, relevance});
+
+
+    Query ParseQuery(const string& text) const {
+        Query query;
+        for (const string& word : SplitIntoWords(text)) {
+            const QueryWord query_word = ParseQueryWord(word);
+            if (!query_word.is_stop) {
+                if (query_word.is_minus) {
+                    query.minus_words.insert(query_word.data);
+                } else {
+                    query.plus_words.insert(query_word.data);
+                }
             }
         }
-        return matched_documents;
+        return query;
     }
 
-    static int MatchDocument(const DocumentContent& content, const set<string>& query_words) {
-        if (query_words.empty()) {
-            return 0;
+    vector<Document> FindAllDocuments(const Query& query) const {
+        //map<string, set<int>> word_to_documents_;
+        map<int, int> document_to_relevance; //ключ - id, значение - релевантность (кол-во плюс слов найденных в ней)
+        for (const auto& word : query.plus_words) {
+            if (word_to_documents_.count(word) == 0) {
+                continue; //ненайденные пропускаем
+            }
+            for (const int document_id : word_to_documents_.at(word)) {
+                ++document_to_relevance[document_id];
+            }
+            // Если в word_to_documents_ есть плюс-слово, увеличьте в document_to_relevance релевантности всех документов,
+            //где это слово найдено. Так вы соберёте все документы, которые содержат плюс-слова запроса.
         }
-        set<string> matched_words;
-        for (const string& word : content.words) {
-            if (matched_words.count(word) != 0) {
+
+        for (const string& word : query.minus_words) {
+            if (word_to_documents_.count(word) == 0){
                 continue;
             }
-            if (query_words.count(word) != 0) {
-                matched_words.insert(word);
+            for (const int document_id : word_to_documents_.at(word)) {
+                document_to_relevance.erase(document_id);
             }
+            //Исключите из результатов поиска все документы, в которых есть минус-слова.
+            //В методе FindAllDocuments переберите в цикле все минус-слова поискового запроса.
+            //Если в word_to_documents_ есть минус-слово, удалите из document_to_relevance все документы с этим минус-словом.
+            //Так в document_to_relevance останутся только подходящие документы.
         }
-        return static_cast<int>(matched_words.size());
+
+        vector<Document> matched_documents;
+        for (auto [document_id, relevance] : document_to_relevance) {
+            matched_documents.push_back({document_id, relevance});
+        }
+        return matched_documents;
+        //Перенесите id и релевантности документов из document_to_relevance в vector<Document> и верните результирующий вектор.
     }
 };
 
@@ -161,52 +195,4 @@ int main() {
              << "relevance = "s << relevance << " }"s << endl;
     }
 }
-/*
-int main() {
-    // ...
 
-    const string query = ReadLine();
-    for (auto [document_id, relevance] : FindTopDocuments(documents, stop_words, query)) {
-        cout << "{ document_id = "s << document_id << ", relevance = "s << relevance << " }"s
-             << endl;
-    }
-}
-*/
-
-
-/*
-#include <iostream>
-#include <set>
-#include <string>
-#include <vector>
-
-using namespace std;
-
-class SearchServer {
-// Содержимое раздела public: доступно для вызова из кода вне класса
-public:
-    int GetStopWordsSize() const {
-        return stop_words_.size();// Верните количество стоп-слов
-    }
-
-// Содержимое раздела private: доступно только внутри методов самого класса
-private:
-    struct DocumentContent {
-        int id = 0;
-        vector<string> words;
-    };
-
-    DocumentContent documents_;
-    set<string> stop_words_;
-};
-
-int GetStopWordsSize(const SearchServer& server) {
-    return server.GetStopWordsSize();// Верните количество стоп-слов у server
-}
-
-int main() {
-    SearchServer server;// 1. Создайте переменную server типа SearchServer
-    cout << GetStopWordsSize(server) << endl;;// 2. Вызовите функцию GetStopWordsSize, передав ей объект server
-    return 0;// 3. Выведите результат, возвращёный функцией GetStopWordsSize в cout
-}
-*/
