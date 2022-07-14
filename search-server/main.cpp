@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 #include <map>
+#include <cmath>
 
 using namespace std;
 
@@ -45,7 +46,8 @@ vector<string> SplitIntoWords(const string& text) {
 
 struct Document {
     int id;
-    int relevance;
+    //int relevance;
+    double relevance;
 };
 
 
@@ -57,14 +59,17 @@ public:
             stop_words_.insert(word);
         }
     }
-//map<string, set<int>> word_to_documents_;
+
+
     void AddDocument(int document_id, const string& document) {
+        ++document_count_;
         const vector<string> words = SplitIntoWordsNoStop(document);
-        //documents_.push_back({document_id, words});
+        const double TF = 1.0 / words.size(); //4 слова в документе, 1 слово-совпадение - 1/4 =0.25;
+
+
         for ( const auto& word : words) {
-            word_to_documents_[word].insert(document_id); //Вставьте в множество документов, соответствующих очередному слову документа, id вставляемого документа. Так очередной документ будет добавлен в инвертированный индекс.
+            word_to_document_freqs_[word][document_id] += TF;//map<string, map<int, double>> word_to_document_freqs_ = map<слово, map<id,+=0.25(TF)>>
         }
-        //word_to_documents_
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
@@ -83,6 +88,11 @@ public:
     }
 
 private:
+
+    int document_count_ = 0;
+    map<string, map<int, double>> word_to_document_freqs_;
+    set<string> stop_words_;
+
     struct QueryWord {
         string data;
         bool is_minus;
@@ -92,10 +102,9 @@ private:
         set<string> plus_words;
         set<string> minus_words;
     };
-    map<string, set<int>> word_to_documents_; // word +  инвертированный индекс документа
-    set<string> stop_words_;
 
     //============methods================================================
+
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
     }
@@ -138,25 +147,33 @@ private:
         return query;
     }
 
+
+    double InverseDocumentFreq(const string& word) const {
+        return log(document_count_ * 1.0 / word_to_document_freqs_.at(word).size()); // IDF = log(kol-vo docs/kol-vo words in document)
+    }
+
     vector<Document> FindAllDocuments(const Query& query) const {
-        //map<string, set<int>> word_to_documents_;
-        map<int, int> document_to_relevance; //ключ - id, значение - релевантность (кол-во плюс слов найденных в ней)
+
+        map<int, double> document_to_relevance; //ключ - id, значение - релевантность(TF-IDF)
+
         for (const auto& word : query.plus_words) {
-            if (word_to_documents_.count(word) == 0) {
+            if (word_to_document_freqs_.count(word) == 0) {
                 continue; //ненайденные пропускаем
             }
-            for (const int document_id : word_to_documents_.at(word)) {
-                ++document_to_relevance[document_id];
+
+            const double inverse_document_freq = InverseDocumentFreq(word);
+            for (const auto [document_id, term_freq] : word_to_document_freqs_.at(word)) {
+                document_to_relevance[document_id] += term_freq * inverse_document_freq;
             }
             // Если в word_to_documents_ есть плюс-слово, увеличьте в document_to_relevance релевантности всех документов,
             //где это слово найдено. Так вы соберёте все документы, которые содержат плюс-слова запроса.
         }
 
         for (const string& word : query.minus_words) {
-            if (word_to_documents_.count(word) == 0){
+            if (word_to_document_freqs_.count(word) == 0){
                 continue;
             }
-            for (const int document_id : word_to_documents_.at(word)) {
+            for (const auto [document_id, term_freq] : word_to_document_freqs_.at(word)) {
                 document_to_relevance.erase(document_id);
             }
             //Исключите из результатов поиска все документы, в которых есть минус-слова.
