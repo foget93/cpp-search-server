@@ -51,19 +51,6 @@ struct Document {
     int rating;
 };
 
-int ComputeAverageRating(const vector<int>& ratings) {
-    if (ratings.empty()) {
-        return 0;
-    }
-    int rating_sum = 0;
-    for (const int rating : ratings) {
-        rating_sum += rating;
-    }
-    // static_cast позволяет привести значение к типу int
-    // без использования дополнительной переменной
-    return rating_sum / static_cast<int>(ratings.size());
-}
-
 class SearchServer {
 public:
     void SetStopWords(const string& text) {
@@ -154,6 +141,18 @@ private:
         return query;
     }
 
+    static int ComputeAverageRating(const vector<int>& ratings) {
+        if (ratings.empty()) {
+            return 0;
+        }
+        int rating_sum = 0;
+        for (const int rating : ratings) {
+            rating_sum += rating;
+        }
+        // static_cast позволяет привести значение к типу int
+        // без использования дополнительной переменной
+        return rating_sum / static_cast<int>(ratings.size());
+    }
     // Existence required
     double ComputeWordInverseDocumentFreq(const string& word) const {
         return log(document_ratings_.size() * 1.0 / word_to_document_freqs_.at(word).size());
