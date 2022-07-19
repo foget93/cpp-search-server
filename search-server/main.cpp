@@ -262,7 +262,7 @@ void PrintDocument(const Document& document) {
          << " }"s << endl;
 }
 
-void PrintMatchDocumentResult(int document_id, const vector<string>& words, DocumentStatus status) {
+/*void PrintMatchDocumentResult(int document_id, const vector<string>& words, DocumentStatus status) {
     cout << "{ "s
          << "document_id = "s << document_id << ", "s
          << "status = "s << static_cast<int>(status) << ", "s
@@ -271,7 +271,7 @@ void PrintMatchDocumentResult(int document_id, const vector<string>& words, Docu
         cout << ' ' << word;
     }
     cout << "}"s << endl;
-}
+}*/
 
 int main() {
 
@@ -301,64 +301,3 @@ int main() {
         }
         return 0;
 }
-
-    /*const int document_count = search_server.GetDocumentCount();
-        for (int document_id = 0; document_id < document_count; ++document_id) {
-            const auto [words, status] = search_server.MatchDocument("пушистый кот"s, document_id);
-            PrintMatchDocumentResult(document_id, words, status);
-        }
-    */
-    /*
-    cout << "ACTUAL:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::ACTUAL)) {
-        PrintDocument(document);
-    }
-
-    cout << "BANNED:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
-        PrintDocument(document);
-    }*/
-
-
-
-// ====================teeest=========================
-
-/*SearchServer CreateSearchServer() {
-    SearchServer search_server;
-    search_server.SetStopWords(ReadLine());
-
-    const int document_count = ReadLineWithNumber();
-    for (int document_id = 0; document_id < document_count; ++document_id) {
-        const string document = ReadLine();
-
-        int status_raw;
-        cin >> status_raw;
-
-        int ratings_size;
-        cin >> ratings_size;
-
-        vector<int> ratings(ratings_size, 0);
-        for (int& rating : ratings) {
-            cin >> rating;
-        }
-
-        search_server.AddDocument(document_id, document, static_cast<DocumentStatus>(status_raw), ratings);
-        ReadLine();
-    }
-
-    return search_server;
-}
-
-
-int test_main() {
-    const SearchServer search_server = CreateSearchServer();
-
-    const string query = ReadLine();
-    const DocumentStatus status = static_cast<DocumentStatus>(ReadLineWithNumber());
-    for (const Document& document : search_server.FindTopDocuments(query, status)) {
-        PrintDocument(document);
-    }
-
-    return 0;
-}
-*/
