@@ -211,7 +211,6 @@ private:
         return query;
     }
 
-    // Existence required
     double ComputeWordInverseDocumentFreq(const string& word) const {
         return log(documents_.size() * 1.0 / word_to_document_freqs_.at(word).size());
     }
