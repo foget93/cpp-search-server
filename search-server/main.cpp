@@ -98,6 +98,7 @@ void RunTestImpl(FUNC f, const string& name_func) {
 // -------- Начало модульных тестов поисковой системы ----------
 
 // Тест проверяет, что поисковая система исключает стоп-слова при добавлении документов
+
 void TestExcludeStopWordsFromAddedDocumentContent() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
@@ -116,8 +117,8 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     // Затем убеждаемся, что поиск этого же слова, входящего в список стоп-слов,
     // возвращает пустой результат
     {
-        SearchServer server;
-        server.SetStopWords("in the"s);
+        SearchServer server("in the"s);
+        //server.SetStopWords("in the"s);
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
     }
@@ -196,8 +197,8 @@ void TestComputeRatings() {
 }
 
 void TestFilterWithPredicate() {
-    SearchServer search_server;
-    search_server.SetStopWords("и в на"s);
+    SearchServer search_server("и в на"s);
+    //search_server.SetStopWords("и в на"s);
 
     search_server.AddDocument(0, "белый кот и модный ошейник"s,        DocumentStatus::ACTUAL, {8, -3});
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s,       DocumentStatus::ACTUAL, {7, 2, 7});
@@ -224,8 +225,8 @@ void TestFindStatus() {
 }
 
 void TestComputeRelevance() {
-    SearchServer search_server;
-    search_server.SetStopWords("и в на"s);
+    SearchServer search_server("и в на"s);
+    //search_server.SetStopWords("и в на"s);
 
     search_server.AddDocument(0, "белый кот и модный ошейник"s,        DocumentStatus::ACTUAL, {8, -3});
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s,       DocumentStatus::ACTUAL, {7, 2, 7});
@@ -257,6 +258,17 @@ void TestSearchServer() {
 // --------- Окончание модульных тестов поисковой системы -------------------------------------------
 
 int main() {
+    // Инициализируем поисковую систему, передавая стоп-слова в контейнере vector
+    const vector<string> stop_words_vector = {"и"s, "в"s, "на"s, ""s, "в"s};
+    SearchServer search_server1(stop_words_vector);
+
+    // Инициализируем поисковую систему передавая стоп-слова в контейнере set
+    const set<string> stop_words_set = {"и"s, "в"s, "на"s};
+    SearchServer search_server2(stop_words_set);
+
+    // Инициализируем поисковую систему строкой со стоп-словами, разделёнными пробелами
+    SearchServer search_server3("  и  в на   "s);
+
     TestSearchServer();
     cout << "Search server testing finished"s << endl;
     return 0;

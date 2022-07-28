@@ -1,3 +1,5 @@
+
+
 #ifndef SEARCH_SERVER_H
 #define SEARCH_SERVER_H
 
@@ -48,10 +50,22 @@ vector<string> SplitIntoWords(const string& text) {
     return words;
 } //string to vector<string> ->" "
 
+
+
 struct Document {
     int id;
     double relevance;
     int rating;
+
+//    Document()
+//            : id(0), relevance(0.0), rating(0)
+//    {
+//    }
+
+    Document(int Id = 0, double Relevance = 0, int Rating = 0)
+            : id(Id), relevance(Relevance), rating(Rating)
+    {
+    }
 };
 
 enum class DocumentStatus {
@@ -63,12 +77,29 @@ enum class DocumentStatus {
 
 class SearchServer {
 public:
-    void SetStopWords(const string& text) {
+
+    SearchServer() = default;
+
+    template<typename StringCollection>
+    explicit SearchServer(const StringCollection& stop_words){
+        for (const auto& word : stop_words) {
+            if (!word.empty()) // hzzzz.....
+                stop_words_.insert(word);
+        }
+    }
+
+    explicit SearchServer(const string& text) {
+        for (const string& word : SplitIntoWords(text)) {
+            stop_words_.insert(word);
+        }
+    }
+
+    /*void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
             stop_words_.insert(word);
         }
     } //setter -> add set<string> stop_words_
-
+*/
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double step = 1.0 / words.size();
