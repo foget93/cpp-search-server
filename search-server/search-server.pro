@@ -5,3 +5,6 @@ CONFIG -= qt
 
 SOURCES += \
         main.cpp
+
+HEADERS += \
+    search_server.h
