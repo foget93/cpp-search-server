@@ -285,7 +285,7 @@ int main() {
         for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
             PrintDocument(document);
         }
-
+/*
         cout << "BANNED:"s << endl;
         for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
             PrintDocument(document);
@@ -297,5 +297,6 @@ int main() {
                                                                        return document_id % 2 == 0; })) {
             PrintDocument(document);
         }
+        */
         return 0;
 }
