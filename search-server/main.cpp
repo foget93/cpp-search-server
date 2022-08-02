@@ -107,7 +107,9 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     // находит нужный документ
     {
         SearchServer server;
-        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        bool OK = server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        ASSERT_EQUAL(OK, true);
+
         vector<Document> documents;
         ASSERT_EQUAL(server.FindTopDocuments("in"s, documents), true);
 
@@ -121,13 +123,15 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     {
         SearchServer server("in the"s);
         //server.SetStopWords("in the"s);
-        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        bool OK = server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        ASSERT_EQUAL(OK, true);
+
         vector<Document> documents;
         (void)server.FindTopDocuments("in"s, documents);
         ASSERT_HINT(documents.empty(), "Stop words must be excluded from documents"s);
     }
 }
-/*
+
 void TestExcludeMinusWordsFromAddedDocumentContent() {
     const int doc_id = 42;
     const string content = "cat in -the city"s;
@@ -135,11 +139,15 @@ void TestExcludeMinusWordsFromAddedDocumentContent() {
     //Убеждаемся, что поиск минус слова возвращает пустой результат
     {
          SearchServer server;
-         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-         ASSERT_HINT(server.FindTopDocuments("the"s).empty(), "Minus words must be excluded from documents"s);
+         (void)server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+         vector<Document> documents;
+         bool OK = server.FindTopDocuments("the"s, documents);
+         ASSERT_HINT(documents.empty(), "Minus words must be excluded from documents"s);
+         ASSERT_EQUAL(OK, true);
+
     }
 }
-
+/*
 void TestMatchDocument() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
@@ -247,7 +255,7 @@ void TestComputeRelevance() {
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
-//    RUN_TEST(TestExcludeMinusWordsFromAddedDocumentContent);
+    RUN_TEST(TestExcludeMinusWordsFromAddedDocumentContent);
 //    RUN_TEST(TestMatchDocument);
 //    RUN_TEST(TestSortingRelevance);
 //    RUN_TEST(TestComputeRatings);
@@ -258,7 +266,6 @@ void TestSearchServer() {
 }
 
 // --------- Окончание модульных тестов поисковой системы -------------------------------------------
-
 int main() {
     // Инициализируем поисковую систему, передавая стоп-слова в контейнере vector
    /* const vector<string> stop_words_vector = {"и"s, "в"s, "на"s, ""s, "в"s};
@@ -271,8 +278,9 @@ int main() {
     // Инициализируем поисковую систему строкой со стоп-словами, разделёнными пробелами
     SearchServer search_server3("  и  в на   "s);
 */
-    TestSearchServer();
-    cout << "Search server testing finished"s << endl;
+
+    //TestSearchServer();
+    //cout << "Search server testing finished"s << endl;
 // --------- Окончание модульных тестов в маин -------------
 
 
@@ -310,6 +318,7 @@ int main() {
 
     if (search_server.GetDocumentId(0) == 1)
         cout << "OK" << endl;
+
     return 0;
 }
 

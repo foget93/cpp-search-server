@@ -111,15 +111,18 @@ public:
 */
     [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
         if (documents_.count(document_id) > 0 || document_id < 0)
-            return false;
+            return false; 
+
+        for (const string& word : SplitIntoWords(document)) {
+            if (!IsValidWord(word))
+                return false;
+        }
 
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double step = 1.0 / words.size();
-        for (const string& word : words) {
-            if (IsValidWord(word))
+        for (const string& word : words) {    
                 word_to_document_freqs_[word][document_id] += step;
-            else
-                return false;// тут мб надо 2 цикла, сначала проверить все слова потом считать частоту
+            // тут мб надо 2 цикла, сначала проверить все слова потом считать частоту
         }
         // example: words = "hello little cat", частота слова cat для этого документа 1/3;(for TF)
         // map<string, map<int, double>> word_to_document_freqs_;
@@ -129,40 +132,44 @@ public:
 
     template <typename DocumentPredicate>
     [[nodiscard]] bool FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate,
-                                      vector<Document>& matched_documents) const {
+                                      vector<Document>& result) const {
+
+        for (const string& word : SplitIntoWords(raw_query)) {
+            if (!IsValidWord(word) || word == "-"s )
+                return false;
+            if (word.size() > 1 && word[1] == '-')
+                return false;
+        } // проверка
 
         const Query query = ParseQuery(raw_query);
-        if (query.minus_words.empty() && query.plus_words.empty()) // priznak oshibki
-            return false;
-
-        matched_documents = FindAllDocuments(query, document_predicate);
+        result = FindAllDocuments(query, document_predicate);
 
         const double EPSILON = 1e-6;
-        sort(matched_documents.begin(), matched_documents.end(),
+        sort(result.begin(), result.end(),
              [EPSILON](const Document& lhs, const Document& rhs) {
                 if(abs(lhs.relevance - rhs.relevance) < EPSILON)
                     return lhs.rating > rhs.rating;
                 else
                     return lhs.relevance > rhs.relevance;
              });
-        if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-            matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+        if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
+            result.resize(MAX_RESULT_DOCUMENT_COUNT);
         }
         return true;
         //return matched_documents;
     } // ищем все доки по плюс минус словам запроса, и предикату или DocumentStatus, снизу перегрузки FindTopDocuments
 
     [[nodiscard]] bool FindTopDocuments(const string& raw_query, DocumentStatus status,
-                                        vector<Document>& matched_documents) const {
+                                        vector<Document>& result) const {
 
         return FindTopDocuments(raw_query,
                                 [status](int document_id, DocumentStatus status_predicate, int rating )
                                 { return status == status_predicate; },
-                                matched_documents);
+                                result);
     }
 
-    [[nodiscard]] bool FindTopDocuments(const string& raw_query, vector<Document>& matched_documents) const {
-        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL, matched_documents);
+    [[nodiscard]] bool FindTopDocuments(const string& raw_query, vector<Document>& result) const {
+        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL, result);
     }
 
     int GetDocumentCount() const {
@@ -172,8 +179,7 @@ public:
     [[nodiscard]] bool MatchDocument(const string& raw_query, int document_id,
                                      tuple<vector<string>, DocumentStatus> result) const {
         const Query query = ParseQuery(raw_query);
-        if (query.minus_words.empty() && query.plus_words.empty()) // priznak oshibki
-            return false;
+
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
@@ -198,7 +204,7 @@ public:
     }
 
     int GetDocumentId(int index) const {
-        if (index > documents_.size() || index < 0)
+        if (index > static_cast<int>(documents_.size()) || index < 0)
             return SearchServer::INVALID_DOCUMENT_ID;
         else {
             int local_index = 0;
@@ -208,6 +214,7 @@ public:
                 local_index++;
             }
         }
+        return SearchServer::INVALID_DOCUMENT_ID;
     }
 
 private:
@@ -273,15 +280,11 @@ private:
         Query query;
         for (const string& word : SplitIntoWords(text)) {
             const QueryWord query_word = ParseQueryWord(word);
-            if (IsValidWord(query_word.data)) {
-                if (query_word.data[0] == '-')
-                    return query;// костыли:)
-                if (!query_word.is_stop) {
-                    if (query_word.is_minus) {
-                        query.minus_words.insert(query_word.data);
-                    } else {
-                        query.plus_words.insert(query_word.data);
-                    }
+            if (!query_word.is_stop) {
+                if (query_word.is_minus) {
+                    query.minus_words.insert(query_word.data);
+                } else {
+                    query.plus_words.insert(query_word.data);
                 }
             }
         }
