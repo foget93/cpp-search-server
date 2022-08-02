@@ -137,8 +137,9 @@ public:
         for (const string& word : SplitIntoWords(raw_query)) {
             if (!IsValidWord(word) || word == "-"s )
                 return false;
-            if (word.size() > 1 && word[1] == '-')
-                return false;
+            if (word.size() > 1)
+                if (word[1] == '-')
+                    return false;
         } // проверка
 
         const Query query = ParseQuery(raw_query);
@@ -178,6 +179,14 @@ public:
 
     [[nodiscard]] bool MatchDocument(const string& raw_query, int document_id,
                                      tuple<vector<string>, DocumentStatus> result) const {
+        for (const string& word : SplitIntoWords(raw_query)) {
+            if (!IsValidWord(word) || word == "-"s )
+                return false;
+            if (word.size() > 1)
+                if (word[1] == '-')
+                    return false;
+        }
+
         const Query query = ParseQuery(raw_query);
 
         vector<string> matched_words;
