@@ -354,7 +354,7 @@ set<int> TakePrimes(const set<int>& numbers) {
         for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
             PrintDocument(document);
         }
-/*
+
         cout << "BANNED:"s << endl;
         for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
             PrintDocument(document);
@@ -366,6 +366,6 @@ set<int> TakePrimes(const set<int>& numbers) {
                                                                        return document_id % 2 == 0; })) {
             PrintDocument(document);
         }
-        */
-        return 0;
+
+        //return 0;
 }*/
