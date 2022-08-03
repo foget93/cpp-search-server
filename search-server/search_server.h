@@ -112,11 +112,10 @@ public:
     [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
         if (documents_.count(document_id) > 0 || document_id < 0)
             return false; 
-
         for (const string& word : SplitIntoWords(document)) {
             if (!IsValidWord(word))
                 return false;
-        }
+        } // проверка
 
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double step = 1.0 / words.size();
@@ -131,19 +130,18 @@ public:
     }
 
     template <typename DocumentPredicate>
-    [[nodiscard]] bool FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate,
-                                      vector<Document>& result) const {
+    optional<vector<Document>> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
 
         for (const string& word : SplitIntoWords(raw_query)) {
             if (!IsValidWord(word) || word == "-"s )
-                return false;
+                return nullopt;
             if (word.size() > 1)
                 if (word[1] == '-')
-                    return false;
+                    return nullopt; //пустой optional
         } // проверка
 
         const Query query = ParseQuery(raw_query);
-        result = FindAllDocuments(query, document_predicate);
+        vector<Document> result = FindAllDocuments(query, document_predicate);
 
         const double EPSILON = 1e-6;
         sort(result.begin(), result.end(),
@@ -156,35 +154,33 @@ public:
         if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
             result.resize(MAX_RESULT_DOCUMENT_COUNT);
         }
-        return true;
-        //return matched_documents;
+        return result;
+
     } // ищем все доки по плюс минус словам запроса, и предикату или DocumentStatus, снизу перегрузки FindTopDocuments
 
-    [[nodiscard]] bool FindTopDocuments(const string& raw_query, DocumentStatus status,
-                                        vector<Document>& result) const {
+    optional<vector<Document>> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
 
         return FindTopDocuments(raw_query,
                                 [status](int document_id, DocumentStatus status_predicate, int rating )
-                                { return status == status_predicate; },
-                                result);
+                                { return status == status_predicate; }
+                                );
     }
 
-    [[nodiscard]] bool FindTopDocuments(const string& raw_query, vector<Document>& result) const {
-        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL, result);
+    optional<vector<Document>> FindTopDocuments(const string& raw_query) const {
+        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
     }
 
     int GetDocumentCount() const {
         return documents_.size();
     }
 
-    [[nodiscard]] bool MatchDocument(const string& raw_query, int document_id,
-                                     tuple<vector<string>, DocumentStatus> result) const {
+    optional<tuple<vector<string>, DocumentStatus>> MatchDocument(const string& raw_query, int document_id) const {
         for (const string& word : SplitIntoWords(raw_query)) {
             if (!IsValidWord(word) || word == "-"s )
-                return false;
+                return nullopt; // empty optional
             if (word.size() > 1)
                 if (word[1] == '-')
-                    return false;
+                    return nullopt; // empty optional
         }
 
         const Query query = ParseQuery(raw_query);
@@ -208,8 +204,7 @@ public:
                 break;
             }
         }
-        result = {matched_words, documents_.at(document_id).status};
-        return true;
+        return tuple{matched_words, documents_.at(document_id).status};
     }
 
     int GetDocumentId(int index) const {
