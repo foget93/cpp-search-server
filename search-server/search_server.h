@@ -96,11 +96,21 @@ public:
     explicit SearchServer(const StringContainer& stop_words)
         : stop_words_(MakeUniqueNonEmptyStrings(stop_words))
     {
+        for (const auto& stop_word : MakeUniqueNonEmptyStrings(stop_words))
+        {
+            if (!IsValidWord(stop_word))
+                throw invalid_argument("Стоп-слово содержит недопустимые символы!");
+        }
     }
 
     explicit SearchServer(const string& stop_words_text)
         : SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
     {
+        for (const auto& stop_word : SplitIntoWords(stop_words_text))
+        {
+            if (!IsValidWord(stop_word))
+                throw invalid_argument("Стоп-слово содержит недопустимые символы.");
+        }
     }
 /*
      void SetStopWords(const string& text) {
@@ -109,12 +119,15 @@ public:
         }
     } //setter -> add set<string> stop_words_
 */
-    [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
-        if (documents_.count(document_id) > 0 || document_id < 0)
-            return false; 
+    void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
+        if (document_id < 0)
+            throw invalid_argument("Попытка добавить документ с отрицательным id.");
+        if (documents_.count(document_id) > 0)
+            throw invalid_argument("Попытка добавить документ c id ранее добавленного документа.");
+
         for (const string& word : SplitIntoWords(document)) {
             if (!IsValidWord(word))
-                return false;
+                throw invalid_argument("Наличие недопустимых символов (с кодами от 0 до 31) в тексте добавляемого документа.");
         } // проверка
 
         const vector<string> words = SplitIntoWordsNoStop(document);
@@ -126,18 +139,19 @@ public:
         // example: words = "hello little cat", частота слова cat для этого документа 1/3;(for TF)
         // map<string, map<int, double>> word_to_document_freqs_;
         documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
-        return true;
     }
 
     template <typename DocumentPredicate>
-    optional<vector<Document>> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
 
         for (const string& word : SplitIntoWords(raw_query)) {
-            if (!IsValidWord(word) || word == "-"s )
-                return nullopt;
+            if (!IsValidWord(word))
+                throw invalid_argument("В словах поискового запроса есть недопустимые символы с кодами от 0 до 31.");
+            if (word == "-"s)
+                throw invalid_argument("Отсутствие текста после символа «минус»: в поисковом запросе.");
             if (word.size() > 1)
-                if (word[1] == '-')
-                    return nullopt; //пустой optional
+                if (word[1] == '-' && word[0] == '-')
+                    throw invalid_argument("Наличие более чем одного минуса перед словами, которых не должно быть в искомых документах"); //пустой optional
         } // проверка
 
         const Query query = ParseQuery(raw_query);
@@ -158,7 +172,7 @@ public:
 
     } // ищем все доки по плюс минус словам запроса, и предикату или DocumentStatus, снизу перегрузки FindTopDocuments
 
-    optional<vector<Document>> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
 
         return FindTopDocuments(raw_query,
                                 [status](int document_id, DocumentStatus status_predicate, int rating )
@@ -166,7 +180,7 @@ public:
                                 );
     }
 
-    optional<vector<Document>> FindTopDocuments(const string& raw_query) const {
+    vector<Document> FindTopDocuments(const string& raw_query) const {
         return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
     }
 
@@ -174,13 +188,15 @@ public:
         return documents_.size();
     }
 
-    optional<tuple<vector<string>, DocumentStatus>> MatchDocument(const string& raw_query, int document_id) const {
+    tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         for (const string& word : SplitIntoWords(raw_query)) {
-            if (!IsValidWord(word) || word == "-"s )
-                return nullopt; // empty optional
+            if (!IsValidWord(word))
+                throw invalid_argument("В словах поискового запроса есть недопустимые символы с кодами от 0 до 31.");
+            if (word == "-"s)
+                throw invalid_argument("Отсутствие текста после символа «минус»: в поисковом запросе.");
             if (word.size() > 1)
-                if (word[1] == '-')
-                    return nullopt; // empty optional
+                if (word[1] == '-' && word[0] == '-')
+                    throw invalid_argument("Наличие более чем одного минуса перед словами, которых не должно быть в искомых документах");
         }
 
         const Query query = ParseQuery(raw_query);
@@ -204,12 +220,12 @@ public:
                 break;
             }
         }
-        return tuple{matched_words, documents_.at(document_id).status};
+        return {matched_words, documents_.at(document_id).status};
     }
 
     int GetDocumentId(int index) const {
         if (index > static_cast<int>(documents_.size()) || index < 0)
-            return SearchServer::INVALID_DOCUMENT_ID;
+            throw out_of_range("индекс переданного документа выходит за пределы допустимого диапазона (0; количество документов).");
         else {
             int local_index = 0;
             for (const auto& document : documents_) {
@@ -217,8 +233,8 @@ public:
                     return document.first;
                 local_index++;
             }
-        }
-        return SearchServer::INVALID_DOCUMENT_ID;
+        }//метод at бросает исключение out_of_range =)
+        return SearchServer::INVALID_DOCUMENT_ID;// никогда не дойдет
     }
 
 private:
@@ -338,6 +354,51 @@ void PrintDocument(const Document& document) {
          << "document_id = "s << document.id << ", "s
          << "relevance = "s << document.relevance << ", "s
          << "rating = "s << document.rating << " }"s << endl;
+}
+
+void PrintMatchDocumentResult(int document_id, const vector<string>& words, DocumentStatus status) {
+    cout << "{ "s
+         << "document_id = "s << document_id << ", "s
+         << "status = "s << static_cast<int>(status) << ", "s
+         << "words ="s;
+    for (const string& word : words) {
+        cout << ' ' << word;
+    }
+    cout << "}"s << endl;
+}
+
+void AddDocument(SearchServer& search_server, int document_id, const string& document, DocumentStatus status,
+                 const vector<int>& ratings) {
+    try {
+        search_server.AddDocument(document_id, document, status, ratings);
+    } catch (const exception& e) {
+        cout << "Ошибка добавления документа "s << document_id << ": "s << e.what() << endl;
+    }
+}
+
+void FindTopDocuments(const SearchServer& search_server, const string& raw_query) {
+    cout << "Результаты поиска по запросу: "s << raw_query << endl;
+    try {
+        for (const Document& document : search_server.FindTopDocuments(raw_query)) {
+            PrintDocument(document);
+        }
+    } catch (const exception& e) {
+        cout << "Ошибка поиска: "s << e.what() << endl;
+    }
+}
+
+void MatchDocuments(const SearchServer& search_server, const string& query) {
+    try {
+        cout << "Матчинг документов по запросу: "s << query << endl;
+        const int document_count = search_server.GetDocumentCount();
+        for (int index = 0; index < document_count; ++index) {
+            const int document_id = search_server.GetDocumentId(index);
+            const auto [words, status] = search_server.MatchDocument(query, document_id);
+            PrintMatchDocumentResult(document_id, words, status);
+        }
+    } catch (const exception& e) {
+        cout << "Ошибка матчинга документов на запрос "s << query << ": "s << e.what() << endl;
+    }
 }
 
 /*void PrintMatchDocumentResult(int document_id, const vector<string>& words, DocumentStatus status) {
