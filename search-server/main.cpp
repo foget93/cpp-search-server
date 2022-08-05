@@ -93,12 +93,10 @@ void RunTestImpl(FUNC f, const string& name_func) {
 
 #define RUN_TEST(func) RunTestImpl((func), #func)
 
-/* Подставьте вашу реализацию класса SearchServer сюда */
-
 // -------- Начало модульных тестов поисковой системы ----------
 
 // Тест проверяет, что поисковая система исключает стоп-слова при добавлении документов
-/*
+
 void TestExcludeStopWordsFromAddedDocumentContent() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
@@ -106,31 +104,23 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     // Сначала убеждаемся, что поиск слова, не входящего в список стоп-слов,
     // находит нужный документ
     {
-        SearchServer server;
-        bool OK = server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        ASSERT_EQUAL(OK, true);
-
-        vector<Document> documents;
-        ASSERT_EQUAL(server.FindTopDocuments("in"s, documents), true);
-
-        ASSERT_EQUAL(documents.size(), 1u);
-        const Document& doc0 = documents[0];
+        SearchServer server("if"s);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        const auto found_docs = server.FindTopDocuments("in"s);
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
     }
-
     // Затем убеждаемся, что поиск этого же слова, входящего в список стоп-слов,
     // возвращает пустой результат
     {
         SearchServer server("in the"s);
-        //server.SetStopWords("in the"s);
-        bool OK = server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        ASSERT_EQUAL(OK, true);
-
-        vector<Document> documents;
-        (void)server.FindTopDocuments("in"s, documents);
-        ASSERT_HINT(documents.empty(), "Stop words must be excluded from documents"s);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
     }
 }
+
+
 
 void TestExcludeMinusWordsFromAddedDocumentContent() {
     const int doc_id = 42;
@@ -139,12 +129,8 @@ void TestExcludeMinusWordsFromAddedDocumentContent() {
     //Убеждаемся, что поиск минус слова возвращает пустой результат
     {
          SearchServer server;
-         (void)server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-         vector<Document> documents;
-         bool OK = server.FindTopDocuments("the"s, documents);
-         ASSERT_HINT(documents.empty(), "Minus words must be excluded from documents"s);
-         ASSERT_EQUAL(OK, true);
-
+         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+         ASSERT_HINT(server.FindTopDocuments("the"s).empty(), "Minus words must be excluded from documents"s);
     }
 }
 
@@ -210,7 +196,6 @@ void TestComputeRatings() {
 
 void TestFilterWithPredicate() {
     SearchServer search_server("и в на"s);
-    //search_server.SetStopWords("и в на"s);
 
     search_server.AddDocument(0, "белый кот и модный ошейник"s,        DocumentStatus::ACTUAL, {8, -3});
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s,       DocumentStatus::ACTUAL, {7, 2, 7});
@@ -239,7 +224,6 @@ void TestFindStatus() {
 void TestComputeRelevance() {
     SearchServer search_server("и в на"s);
     //search_server.SetStopWords("и в на"s);
-
     search_server.AddDocument(0, "белый кот и модный ошейник"s,        DocumentStatus::ACTUAL, {8, -3});
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s,       DocumentStatus::ACTUAL, {7, 2, 7});
     search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, {5, -12, 2, 1});
@@ -251,34 +235,22 @@ void TestComputeRelevance() {
     ASSERT_HINT(found_docs[1].relevance - 0.173287 < EPSILON, "relevance calculation is wrong"s);
     ASSERT_HINT(found_docs[2].relevance - 0.173287 < EPSILON, "relevance calculation is wrong"s);
 }
-*/
+
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
-//    RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
-//    RUN_TEST(TestExcludeMinusWordsFromAddedDocumentContent);
-//    RUN_TEST(TestMatchDocument);
-//    RUN_TEST(TestSortingRelevance);
-//    RUN_TEST(TestComputeRatings);
-//    RUN_TEST(TestFilterWithPredicate);
-//    RUN_TEST(TestFindStatus);
-//    RUN_TEST(TestComputeRelevance);
+    RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
+    RUN_TEST(TestExcludeMinusWordsFromAddedDocumentContent);
+    RUN_TEST(TestMatchDocument);
+    RUN_TEST(TestSortingRelevance);
+    RUN_TEST(TestComputeRatings);
+    RUN_TEST(TestFilterWithPredicate);
+    RUN_TEST(TestFindStatus);
+    RUN_TEST(TestComputeRelevance);
     // Не забудьте вызывать остальные тесты здесь
 }
 
 // --------- Окончание модульных тестов поисковой системы -------------------------------------------
 int main() {
-    // Инициализируем поисковую систему, передавая стоп-слова в контейнере vector
-   /* const vector<string> stop_words_vector = {"и"s, "в"s, "на"s, ""s, "в"s};
-    SearchServer search_server1(stop_words_vector);
-
-    // Инициализируем поисковую систему передавая стоп-слова в контейнере set
-    const set<string> stop_words_set = {"и"s, "в"s, "на"s};
-    SearchServer search_server2(stop_words_set);
-
-    // Инициализируем поисковую систему строкой со стоп-словами, разделёнными пробелами
-    SearchServer search_server3("  и  в на   "s);
-*/
-
     //TestSearchServer();
     //cout << "Search server testing finished"s << endl;
 // --------- Окончание модульных тестов в маин -------------
@@ -302,71 +274,5 @@ int main() {
 
     return 0;
 }
-
-
-/* ==================test ASSERT_EQUAL for set, vector....
-vector<int> TakeEvens(const vector<int>& numbers) {
-    vector<int> evens;
-    for (int x : numbers) {
-        if (x % 2 == 0) {
-            evens.push_back(x);
-        }
-    }
-    return evens;
-}
-
-map<string, int> TakeAdults(const map<string, int>& people) {
-    map<string, int> adults;
-    for (const auto& [name, age] : people) {
-        if (age >= 18) {
-            adults[name] = age;
-        }
-    }
-    return adults;
-}
-
-bool IsPrime(int n) {
-    if (n < 2) {
-        return false;
-    }
-    int i = 2;
-    while (i * i <= n) {
-        if (n % i == 0) {
-            return false;
-        }
-        ++i;
-    }
-    return true;
-}
-
-set<int> TakePrimes(const set<int>& numbers) {
-    set<int> primes;
-    for (int number : numbers) {
-        if (IsPrime(number)) {
-            primes.insert(number);
-        }
-    }
-    return primes;
-}
-*/
-
-/* =================test ASSERT_EQUAL for set, vector....
- * {
-     const set<int> numbers = {-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-     const set<int> expected_primes = {2, 3, 5, 7, 11, 13};
-     ASSERT_EQUAL(TakePrimes(numbers), expected_primes);
- }
-
- {
-     const map<string, int> people = {{"Ivan"s, 19}, {"Sergey"s, 16}, {"Alexey"s, 18}};
-     const map<string, int> expected_adults = {{"Alexey"s, 18}, {"Ivan"s, 19}};
-     ASSERT_EQUAL(TakeAdults(people), expected_adults);
- }
-
- {
-     const vector<int> numbers = {3, 2, 1, 0, 3, 6};
-     const vector<int> expected_evens = {2, 0, 6};
-     ASSERT_EQUAL(TakeEvens(numbers), expected_evens);
- }*/
 
 

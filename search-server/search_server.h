@@ -1,5 +1,3 @@
-
-
 #ifndef SEARCH_SERVER_H
 #define SEARCH_SERVER_H
 
@@ -63,7 +61,6 @@ struct Document {
     int id = 0;
     double relevance = 0.0;
     int rating = 0;
-
 };
 
 template <typename StringContainer>
@@ -88,7 +85,7 @@ class SearchServer {
 public:
     // Defines an invalid document id
     // You can refer to this constant as SearchServer::INVALID_DOCUMENT_ID
-    inline static constexpr int INVALID_DOCUMENT_ID = -1;
+    //inline static constexpr int INVALID_DOCUMENT_ID = -1;
 
     SearchServer() = default; // старые тесты без стоп слов
 
@@ -177,7 +174,7 @@ public:
         return FindTopDocuments(raw_query,
                                 [status](int document_id, DocumentStatus status_predicate, int rating )
                                 { return status == status_predicate; }
-                                );
+                               );
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
@@ -225,16 +222,15 @@ public:
 
     int GetDocumentId(int index) const {
         if (index > static_cast<int>(documents_.size()) || index < 0)
-            throw out_of_range("индекс переданного документа выходит за пределы допустимого диапазона (0; количество документов).");
-        else {
-            int local_index = 0;
-            for (const auto& document : documents_) {
-                if (local_index == index)
-                    return document.first;
-                local_index++;
-            }
-        }//метод at бросает исключение out_of_range =)
-        return SearchServer::INVALID_DOCUMENT_ID;// никогда не дойдет
+            throw out_of_range("индекс переданного документа выходит за пределы допустимого диапазона [0; количество документов).");
+
+        int local_index = 0;
+        for (const auto& document : documents_) {
+            if (local_index == index)
+                return document.first;
+            local_index++;
+        }
+        //метод at бросает исключение out_of_range =)
     }
 
 private:
@@ -401,14 +397,4 @@ void MatchDocuments(const SearchServer& search_server, const string& query) {
     }
 }
 
-/*void PrintMatchDocumentResult(int document_id, const vector<string>& words, DocumentStatus status) {
-    cout << "{ "s
-         << "document_id = "s << document_id << ", "s
-         << "status = "s << static_cast<int>(status) << ", "s
-         << "words ="s;
-    for (const string& word : words) {
-        cout << ' ' << word;
-    }
-    cout << "}"s << endl;
-}*/
 #endif // SEARCH_SERVER_H
