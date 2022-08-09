@@ -101,11 +101,7 @@ public:
 
     explicit SearchServer(const string& stop_words_text)
         : SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
-    {
-        if(any_of(stop_words_.cbegin(), stop_words_.cend(),
-                  [](const string& word){ return !IsValidWord(word); } )) {
-            throw invalid_argument("Стоп-слово содержит недопустимые символы!");
-        }
+    {   
     }
 /*
      void SetStopWords(const string& text) {
@@ -214,7 +210,7 @@ public:
 private:
     struct DocumentData {
         int rating = 0;
-        DocumentStatus status;
+        DocumentStatus status = DocumentStatus::ACTUAL;
     };
 
     set<string> stop_words_;
@@ -252,8 +248,8 @@ private:
 
     struct QueryWord {
         string data;
-        bool is_minus;
-        bool is_stop;
+        bool is_minus{false};
+        bool is_stop{false};
     };
 
     QueryWord ParseQueryWord(string text) const {
