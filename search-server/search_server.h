@@ -93,20 +93,18 @@ public:
     explicit SearchServer(const StringContainer& stop_words)
         : stop_words_(MakeUniqueNonEmptyStrings(stop_words))
     {
-        for (const auto& stop_word : MakeUniqueNonEmptyStrings(stop_words))
-        {
-            if (!IsValidWord(stop_word))
-                throw invalid_argument("Стоп-слово содержит недопустимые символы!");
-        }
+        if (any_of(stop_words_.cbegin(), stop_words_.cend(),
+                  [](const string& word){ return !IsValidWord(word); } )) {
+            throw invalid_argument("Стоп-слово содержит недопустимые символы!");
+        } // https://en.cppreference.com/w/cpp/algorithm/all_any_none_of
     }
 
     explicit SearchServer(const string& stop_words_text)
         : SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
     {
-        for (const auto& stop_word : SplitIntoWords(stop_words_text))
-        {
-            if (!IsValidWord(stop_word))
-                throw invalid_argument("Стоп-слово содержит недопустимые символы.");
+        if(any_of(stop_words_.cbegin(), stop_words_.cend(),
+                  [](const string& word){ return !IsValidWord(word); } )) {
+            throw invalid_argument("Стоп-слово содержит недопустимые символы!");
         }
     }
 /*
@@ -141,17 +139,7 @@ public:
     template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
 
-        for (const string& word : SplitIntoWords(raw_query)) {
-            if (!IsValidWord(word))
-                throw invalid_argument("В словах поискового запроса есть недопустимые символы с кодами от 0 до 31.");
-            if (word == "-"s)
-                throw invalid_argument("Отсутствие текста после символа «минус»: в поисковом запросе.");
-            if (word.size() > 1)
-                if (word[1] == '-' && word[0] == '-')
-                    throw invalid_argument("Наличие более чем одного минуса перед словами, которых не должно быть в искомых документах"); //пустой optional
-        } // проверка
-
-        const Query query = ParseQuery(raw_query);
+        const Query query = ParseQuery(raw_query);// исключения бросаются в ParseQueryWord
         vector<Document> result = FindAllDocuments(query, document_predicate);
 
         const double EPSILON = 1e-6;
@@ -186,17 +174,7 @@ public:
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
-        for (const string& word : SplitIntoWords(raw_query)) {
-            if (!IsValidWord(word))
-                throw invalid_argument("В словах поискового запроса есть недопустимые символы с кодами от 0 до 31.");
-            if (word == "-"s)
-                throw invalid_argument("Отсутствие текста после символа «минус»: в поисковом запросе.");
-            if (word.size() > 1)
-                if (word[1] == '-' && word[0] == '-')
-                    throw invalid_argument("Наличие более чем одного минуса перед словами, которых не должно быть в искомых документах");
-        }
-
-        const Query query = ParseQuery(raw_query);
+        const Query query = ParseQuery(raw_query); // исключения бросаются в ParseQueryWord
 
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
@@ -235,7 +213,7 @@ public:
 
 private:
     struct DocumentData {
-        int rating;
+        int rating = 0;
         DocumentStatus status;
     };
 
@@ -279,6 +257,14 @@ private:
     };
 
     QueryWord ParseQueryWord(string text) const {
+        if (!IsValidWord(text))
+            throw invalid_argument("В словах поискового запроса есть недопустимые символы с кодами от 0 до 31.");
+        if (text == "-"s)
+            throw invalid_argument("Отсутствие текста после символа «минус»: в поисковом запросе.");
+        if (text.size() > 1)
+            if (text[1] == '-' && text[0] == '-')
+                throw invalid_argument("Наличие более чем одного минуса перед словами, которых не должно быть в искомых документах");
+       // проверка
         bool is_minus = false;
         if (text[0] == '-') {
             is_minus = true;
