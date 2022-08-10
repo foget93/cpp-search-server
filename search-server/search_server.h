@@ -204,6 +204,7 @@ public:
                 return document.first;
             local_index++;
         }
+        return -1; // для тестовой системы (не должно дойти)
         //метод at бросает исключение out_of_range =)
     }
 
@@ -266,7 +267,7 @@ private:
             is_minus = true;
             text = text.substr(1);
         }
-        return { text, is_minus, IsStopWord(text)};
+        return { text, is_minus, IsStopWord(text) };
     }
 
     struct Query {
