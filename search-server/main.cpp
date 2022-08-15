@@ -230,29 +230,7 @@ void TestFindStatus() {
     ASSERT_HINT(found_docs.size() == 1u && found_docs[0].id == 3, "FindTopDocuments by DocumentStatus:: is not correct."s
                                                                   " Rigth value: found_docs.size() == 1 && found_docs[0].id == 3"s);
 }
-/*
-template<typename Documents, typename Term>
-vector<double> ComputeTfIdfs(const Documents& documents,
-                             const Term& term) {
-    vector<double> tf_idfs;
 
-        int document_freq = 0;
-        for (const auto& document : documents) {
-            const int freq = count(document.begin(), document.end(), term);
-            if (freq > 0) {
-                ++document_freq;
-            }
-            tf_idfs.push_back(static_cast<double>(freq) / document.size());
-        }
-
-        const double idf = log(static_cast<double>(documents.size()) / document_freq);
-        for (double& tf_idf : tf_idfs) {
-            tf_idf *= idf;
-        }
-
-        return tf_idfs;
-}//for TestComputeRelevance()
-*/
 void TestComputeRelevance() {
     SearchServer search_server;
 
@@ -295,7 +273,30 @@ void TestSearchServer() {
 }
 
 // --------- Окончание модульных тестов поисковой системы -------------------------------------------
+
+
 int main() {
+    SearchServer search_server("and with"s);
+
+    search_server.AddDocument(1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, {7, 2, 7});
+    search_server.AddDocument(2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, {1, 2, 3});
+    search_server.AddDocument(3, "big cat nasty hair"s, DocumentStatus::ACTUAL, {1, 2, 8});
+    search_server.AddDocument(4, "big dog cat Vladislav"s, DocumentStatus::ACTUAL, {1, 3, 2});
+    search_server.AddDocument(5, "big dog hamster Borya"s, DocumentStatus::ACTUAL, {1, 1, 1});
+
+    const auto search_results = search_server.FindTopDocuments("curly dog"s); //vector <Document>
+
+
+    int page_size = 2;
+    const auto pages = Paginate(search_results, page_size);
+
+    // Выводим найденные документы по страницам
+    for (auto page = pages.begin(); page != pages.end(); ++page) {
+        cout << *page << endl;
+        cout << "Page break"s << endl;
+    }
+}
+/*int main() {
     //TestSearchServer();
     //cout << "Search server testing finished"s << endl;
 
@@ -319,6 +320,6 @@ int main() {
     MatchDocuments(search_server, "пушистый - хвост"s);
 
     return 0;
-}
+}*/
 
 
