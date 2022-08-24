@@ -1,8 +1,11 @@
 #include <cassert> //  не нужно
 #include <cstdlib> // abort();
 #include <iomanip>
+#include <cmath>
 
+#include "request_queue.h"
 #include "search_server.h"
+#include "paginator.h"
 
 using namespace std;
 // --------- for tests -------------------------------------------
@@ -213,7 +216,7 @@ void TestFilterWithPredicate() {
     search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, {5, -12, 2, 1});
     search_server.AddDocument(3, "ухоженный скворец евгений"s,         DocumentStatus::BANNED, {9});
     const auto found_docs = search_server.FindTopDocuments("пушистый ухоженный кот"s,
-                                                           [](int document_id, DocumentStatus status, int rating) {
+                                                           [](int document_id, [[maybe_unused]]DocumentStatus status, [[maybe_unused]]int rating) {
                                                            return document_id % 2 == 0; });
     for (const Document& document : found_docs) {
         ASSERT_EQUAL(document.id % 2, 0);
@@ -242,7 +245,7 @@ void TestComputeRelevance() {
     const auto found_docs =  search_server.FindTopDocuments("кот"s);
     const double EPSILON = 1e-6;
 
-    double IDF = log(3.0/2);  //IDF слова "кот" (для каждого слова запроса)
+    double IDF = std::log(3.0/2);  //IDF слова "кот" (для каждого слова запроса)
                               //3 -> кол-во документов; 2 -> в 2х док-тах встречается слово "кот".
 
     double TF_0 = 1.0/2;
@@ -251,10 +254,10 @@ void TestComputeRelevance() {
 
     double IDFxTF_0 = IDF * TF_0; //~0.2027325540540822
     double IDFxTF_1 = IDF * TF_1; //~0.13515503603605478
-    double IDFxTF_2 = IDF * TF_2; // 0 -> слово отсутствует
+    [[maybe_unused]]double IDFxTF_2 = IDF * TF_2; // 0 -> слово отсутствует
 
-    double a = abs(found_docs[0].relevance - IDFxTF_0);
-    double b = abs(found_docs[1].relevance - IDFxTF_1);
+    double a = std::abs(found_docs[0].relevance - IDFxTF_0);
+    double b = std::abs(found_docs[1].relevance - IDFxTF_1);
 
     ASSERT_HINT(a < EPSILON, "relevance calculation is wrong"s);
     ASSERT_HINT(b < EPSILON, "relevance calculation is wrong"s);
@@ -275,7 +278,7 @@ void TestSearchServer() {
 
 // --------- Окончание модульных тестов поисковой системы -------------------------------------------
 
-
+/*
 int main() {
     SearchServer search_server("and in at"s);
     RequestQueue request_queue(search_server);
@@ -299,8 +302,8 @@ int main() {
     cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << endl;
     return 0;
 }
-
-/*int main() {
+*/
+int main() {
     SearchServer search_server("and with"s);
 
     search_server.AddDocument(1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, {7, 2, 7});
@@ -321,9 +324,10 @@ int main() {
         cout << "Page break"s << endl;
     }
 }
+/*
 int main() {
-    //TestSearchServer();
-    //cout << "Search server testing finished"s << endl;
+    TestSearchServer();
+    cout << "Search server testing finished"s << endl;
 
 // --------- Окончание модульных тестов в маин -------------
 
