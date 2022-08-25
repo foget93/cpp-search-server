@@ -9,7 +9,8 @@ SOURCES += \
         read_input_functions.cpp \
         request_queue.cpp \
         search_server.cpp \
-        string_processing.cpp
+        string_processing.cpp \
+        unit_tests.cpp
 
 HEADERS += \
     document.h \
@@ -17,4 +18,5 @@ HEADERS += \
     read_input_functions.h \
     request_queue.h \
     search_server.h \
-    string_processing.h
+    string_processing.h \
+    unit_tests.h

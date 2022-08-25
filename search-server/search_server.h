@@ -56,6 +56,7 @@ public:
     } // ищем все доки по плюс минус словам запроса, и предикату или DocumentStatus, снизу перегрузки FindTopDocuments
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const; // 3 перегрузка не нужна(значение по умолчанию status = DocumentStatus::ACTUAL)
+
     int GetDocumentCount() const;
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
