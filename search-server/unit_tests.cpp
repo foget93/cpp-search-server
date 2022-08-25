@@ -178,7 +178,6 @@ void TestComputeRelevance() {
     ASSERT_HINT(a < EPSILON, "relevance calculation is wrong"s);
     ASSERT_HINT(b < EPSILON, "relevance calculation is wrong"s);
 }
-
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);

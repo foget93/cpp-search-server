@@ -1,7 +1,5 @@
-//#include <cassert> //  не нужно
-//#include <cstdlib> // abort();
-//#include <iomanip>
-//#include <cmath>
+#pragma once
+
 #include <iostream>
 #include <utility>
 #include <vector>
