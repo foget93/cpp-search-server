@@ -1,4 +1,5 @@
 #include "search_server.h"
+#include "log_duration.h" // матчинг и поиск топ
 
 #include <numeric>
 #include <cmath>
@@ -146,6 +147,8 @@ using namespace std::literals;
         return std::log(documents_.size() * 1.0 / word_to_document_freqs_.at(word).size());
     } // IDF
 
+// =====================================================================================================
+
     void PrintDocument(const Document& document) {
         std::cout << "{ "s
              << "document_id = "s << document.id << ", "s
@@ -174,6 +177,9 @@ using namespace std::literals;
     }
 
     void FindTopDocuments(const SearchServer& search_server, const std::string& raw_query) {
+        //LOG_DURATION_STREAM("Operation time"s, std::cout);
+        LogDuration("Operation time"s, std::cout);
+
         std::cout << "Результаты поиска по запросу: "s << raw_query << std::endl;
         try {
             for (const Document& document : search_server.FindTopDocuments(raw_query)) {
@@ -185,6 +191,9 @@ using namespace std::literals;
     }
 
     void MatchDocuments(const SearchServer& search_server, const std::string& query) {
+        LOG_DURATION_STREAM("Operation time"s, std::cout);
+        //LogDuration("Operation time"s, std::cout);
+        //LOG_DURATION_STREAM("Operation time"s, std::cout);
         try {
             std::cout << "Матчинг документов по запросу: "s << query << std::endl;
             const int document_count = search_server.GetDocumentCount();

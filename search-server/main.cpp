@@ -9,7 +9,7 @@
 
 
 
-
+/*
 int main() {
     SearchServer search_server("and in at"s);
     RequestQueue request_queue(search_server);
@@ -33,7 +33,7 @@ int main() {
     std::cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << std::endl;
     return 0;
 }
-/*
+
  * using namespace std;
 int main() {
     TestSearchServer();
@@ -59,11 +59,11 @@ int main() {
         cout << "Page break"s << endl;
     }
 }
-
+*/
 int main() {
-    TestSearchServer();
-    cout << "Search server testing finished"s << endl;
-
+    /*TestSearchServer();
+    std::cout << "Search server testing finished"s << std::endl;
+*/
 // --------- Окончание модульных тестов в маин -------------
 
     SearchServer search_server("и в на"s);
@@ -73,6 +73,15 @@ int main() {
     AddDocument(search_server, -1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, {1, 2});
     AddDocument(search_server, 3, "большой пёс скво\x12рец евгений"s, DocumentStatus::ACTUAL, {1, 3, 2});
     AddDocument(search_server, 4, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, {1, 1, 1});
+    AddDocument(search_server, 5, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, {1, 1, 1});
+    AddDocument(search_server, 6, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, {1, 1, 1});
+    AddDocument(search_server, 7, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, {1, 1, 1});
+    AddDocument(search_server, 8, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, {1, 1, 1});
+    AddDocument(search_server, 9, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, {1, 1, 1});
+    AddDocument(search_server, 22, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, {1, 1, 1});
+    AddDocument(search_server, 13, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, {1, 1, 1});
+    AddDocument(search_server, 44, "большой пёс скворец евгений"s, DocumentStatus::ACTUAL, {1, 1, 1});
+
 
     FindTopDocuments(search_server, "пушистый -пёс"s);
     FindTopDocuments(search_server, "пушистый --кот"s);
@@ -84,6 +93,6 @@ int main() {
     MatchDocuments(search_server, "пушистый - хвост"s);
 
     return 0;
-}*/
+}
 
 

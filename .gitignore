@@ -36,3 +36,6 @@
 Makefile
 .qmake.stash
 .qtc_clangd/
+
+*.build-search-server-Desktop-Profile/
+*.build-search-server-Desktop-Release/
