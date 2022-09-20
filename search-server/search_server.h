@@ -61,7 +61,18 @@ public:
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
 
-    int GetDocumentId(int index) const;
+    //int GetDocumentId(int index) const; //- отказ 5 спринт
+    const std::map<std::string, double> &GetWordFrequencies(int index) const;
+
+    void RemoveDocument(int index);
+
+    std::set<int>::iterator begin();
+
+    std::set<int>::const_iterator begin() const;
+
+    std::set<int>::iterator end();
+
+    std::set<int>::const_iterator end() const;
 
 private:
     struct DocumentData {
@@ -72,6 +83,11 @@ private:
     std::set<std::string> stop_words_;
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;// word -> id документов с word и их idf*tf
     std::map<int, DocumentData> documents_; // id + средний рейтинг + статус
+
+    //=========5 sprint======
+    std::set<int> documents_ids_;
+    std::map<int, std::map<std::string, double>> words_freqs_by_documents_;
+    //=======================
 
     static bool IsValidWord(const std::string& word);
 
@@ -133,15 +149,3 @@ private:
 
 // =================================================================================================================================
 
-void PrintDocument(const Document& document);
-
-void PrintMatchDocumentResult(int document_id, const std::vector<std::string>& words, DocumentStatus status);
-
-void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status,
-                 const std::vector<int>& ratings);
-
-void FindTopDocuments(const SearchServer& search_server, const std::string& raw_query);
-
-void MatchDocuments(const SearchServer& search_server, const std::string& query);
-
-//========== for excepts ==============

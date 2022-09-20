@@ -20,14 +20,15 @@ using namespace std::literals;
         const std::vector<std::string> words = SplitIntoWordsNoStop(document);
         const double step = 1.0 / words.size();
         for (const std::string& word : words) {
-                word_to_document_freqs_[word][document_id] += step;
-            // тут мб надо 2 цикла, сначала проверить все слова потом считать частоту
+            word_to_document_freqs_[word][document_id] += step;
+            words_freqs_by_documents_[document_id][word] += step;
         }
         // example: words = "hello little cat", частота слова cat для этого документа 1/3;(for TF)
         // map<string, map<int, double>> word_to_document_freqs_;
+        // map<int, map<string, double>> words_freqs_by_documents_; - по id
         documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
+        documents_ids_.insert(document_id);
     }
-
 
     std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {
 
@@ -37,15 +38,14 @@ using namespace std::literals;
                                );
     }
 
-
     int SearchServer::GetDocumentCount() const {
-        return documents_.size();
+        return static_cast<int>(documents_.size());
     }
 
     std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
         const Query query = ParseQuery(raw_query); // исключения бросаются в ParseQueryWord
-
         std::vector<std::string> matched_words;
+
         for (const std::string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
                 continue;
@@ -66,8 +66,8 @@ using namespace std::literals;
         }
         return {matched_words, documents_.at(document_id).status};
     }
-
-    int SearchServer::GetDocumentId(int index) const {
+// -------5 sprint delete----------
+/*  int SearchServer::GetDocumentId(int index) const {
         if (index > static_cast<int>(documents_.size()) || index < 0)
             throw std::out_of_range("индекс переданного документа выходит за пределы допустимого диапазона [0; количество документов).");
 
@@ -80,7 +80,8 @@ using namespace std::literals;
         return -1; // для тестовой системы (не должно дойти)
         //метод at бросает исключение out_of_range =)
     }
-
+*/
+// -------5 sprint delete----------
     bool SearchServer::IsValidWord(const std::string& word) {
         // A valid word must not contain special characters
         return std::none_of(word.begin(), word.end(), [](char c) {
@@ -146,63 +147,44 @@ using namespace std::literals;
     double SearchServer::ComputeWordInverseDocumentFreq(const std::string& word) const {
         return std::log(documents_.size() * 1.0 / word_to_document_freqs_.at(word).size());
     } // IDF
+    const std::map<std::string, double> &SearchServer::GetWordFrequencies(int index) const {
+        static const std::map<std::string, double> empty_map {};
 
-// =====================================================================================================
+        if (words_freqs_by_documents_.count(index) > 0)
+            return words_freqs_by_documents_.at(index);
 
-    void PrintDocument(const Document& document) {
-        std::cout << "{ "s
-             << "document_id = "s << document.id << ", "s
-             << "relevance = "s << document.relevance << ", "s
-             << "rating = "s << document.rating << " }"s << std::endl;
+        return empty_map;
     }
 
-    void PrintMatchDocumentResult(int document_id, const std::vector<std::string>& words, DocumentStatus status) {
-        std::cout << "{ "s
-             << "document_id = "s << document_id << ", "s
-             << "status = "s << static_cast<int>(status) << ", "s
-             << "words ="s;
-        for (const std::string& word : words) {
-            std::cout << ' ' << word;
+    void SearchServer::RemoveDocument(int index) {
+        auto it_doc_pos = documents_ids_.find(index);
+
+        if (it_doc_pos == documents_ids_.end())
+            return;
+        // map<int, map<string, double>> words_freqs_by_documents_ -> word : string
+        for (const auto& [word, _] : words_freqs_by_documents_.at(index)) {
+            // map<string, map<int, double>> word_to_document_freqs_ -> (erase - int)
+            word_to_document_freqs_.at(word).erase(index);
         }
-        std::cout << "}"s << std::endl;
+        documents_ids_.erase(it_doc_pos);
+        documents_.erase(index);
+        words_freqs_by_documents_.erase(index);
     }
 
-    void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status,
-                     const std::vector<int>& ratings) {
-        try {
-            search_server.AddDocument(document_id, document, status, ratings);
-        } catch (const std::exception& e) {
-            std::cout << "Ошибка добавления документа "s << document_id << ": "s << e.what() << std::endl;
-        }
+    std::set<int>::iterator SearchServer::begin() {
+        return documents_ids_.begin();
     }
 
-    void FindTopDocuments(const SearchServer& search_server, const std::string& raw_query) {
-        //LOG_DURATION_STREAM("Operation time"s, std::cout);
-        LogDuration("Operation time"s, std::cout);
-
-        std::cout << "Результаты поиска по запросу: "s << raw_query << std::endl;
-        try {
-            for (const Document& document : search_server.FindTopDocuments(raw_query)) {
-                PrintDocument(document);
-            }
-        } catch (const std::exception& e) {
-            std::cout << "Ошибка поиска: "s << e.what() << std::endl;
-        }
+    std::set<int>::const_iterator SearchServer::begin() const {
+        return documents_ids_.begin();
     }
 
-    void MatchDocuments(const SearchServer& search_server, const std::string& query) {
-        LOG_DURATION_STREAM("Operation time"s, std::cout);
-        //LogDuration("Operation time"s, std::cout);
-        //LOG_DURATION_STREAM("Operation time"s, std::cout);
-        try {
-            std::cout << "Матчинг документов по запросу: "s << query << std::endl;
-            const int document_count = search_server.GetDocumentCount();
-            for (int index = 0; index < document_count; ++index) {
-                const int document_id = search_server.GetDocumentId(index);
-                const auto [words, status] = search_server.MatchDocument(query, document_id);
-                PrintMatchDocumentResult(document_id, words, status);
-            }
-        } catch (const std::exception& e) {
-            std::cout << "Ошибка матчинга документов на запрос "s << query << ": "s << e.what() << std::endl;
-        }
+    std::set<int>::iterator SearchServer::end() {
+        return documents_ids_.end();
     }
+
+    std::set<int>::const_iterator SearchServer::end() const {
+        return documents_ids_.end();
+    }
+
+
