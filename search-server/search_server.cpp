@@ -42,7 +42,7 @@ using namespace std::literals;
         return static_cast<int>(documents_.size());
     }
 
-    std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
+    SearchServer::DataAfterMatching SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
         const Query query = ParseQuery(raw_query); // исключения бросаются в ParseQueryWord
         std::vector<std::string> matched_words;
 
@@ -147,6 +147,7 @@ using namespace std::literals;
     double SearchServer::ComputeWordInverseDocumentFreq(const std::string& word) const {
         return std::log(documents_.size() * 1.0 / word_to_document_freqs_.at(word).size());
     } // IDF
+
     const std::map<std::string, double> &SearchServer::GetWordFrequencies(int index) const {
         static const std::map<std::string, double> empty_map {};
 
