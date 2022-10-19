@@ -67,5 +67,5 @@ std::vector<Document> TrivialProcessQueriesJoined( const SearchServer& search_se
             result.push_back(std::move(doc));
         }
     }
-    return result;
+    return result;// sss
 }
