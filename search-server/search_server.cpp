@@ -33,7 +33,8 @@ using namespace std::literals;
     std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {
 
         return FindTopDocuments(raw_query,
-                                [status]([[maybe_unused]]int document_id, DocumentStatus status_predicate, [[maybe_unused]] int rating )
+                                [status]
+                                ([[maybe_unused]]int document_id, DocumentStatus status_predicate, [[maybe_unused]] int rating )
                                 { return status == status_predicate; }
                                );
     }

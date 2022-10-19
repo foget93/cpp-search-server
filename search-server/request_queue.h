@@ -1,7 +1,7 @@
 #pragma once
 
 #include <deque>
-#include <vector>
+//#include <vector>
 //#include <string> - в "document.h"
 
 #include "document.h"
