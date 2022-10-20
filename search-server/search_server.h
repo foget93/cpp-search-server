@@ -5,11 +5,11 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-
+#include <utility>
 
 #include "document.h"
 #include "string_processing.h"
-
+#include <execution>
 //using
 
 const int MAX_RESULT_DOCUMENT_COUNT {5};
@@ -46,6 +46,9 @@ public:
     const std::map<std::string, double> &GetWordFrequencies(int index) const;
 
     void RemoveDocument(int index);
+
+    template<typename ExecutionPolicy>
+    void RemoveDocument(ExecutionPolicy&& policy, int index);
 
     std::set<int>::iterator begin();
 
@@ -165,3 +168,47 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query, Documen
     }
     return matched_documents;
 }
+
+template<typename ExecutionPolicy>
+void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int index) {
+    using namespace std::execution;
+
+    auto it_doc_pos = documents_ids_.find(index);
+    if (it_doc_pos == documents_ids_.end())
+        return;
+
+    std::vector<const std::string*> pointers;
+
+    auto& words_freqs = words_freqs_by_documents_.at(index);
+
+    std::transform(
+                   words_freqs.begin(), words_freqs.end(),
+                   pointers.begin(),
+                   [](std::pair<const std::string, double>& word_freq){
+                        return &(word_freq.first);
+                    });
+    std::for_each(policy,
+                  pointers.begin(), pointers.end(),
+                  [&](auto& pword) { // [word,_] not worked
+                        word_to_document_freqs_.at(*pword).erase(index);
+                    });
+
+    documents_ids_.erase(it_doc_pos);
+    documents_.erase(index);
+    words_freqs_by_documents_.erase(index);
+}
+
+/*
+        auto it_doc_pos = documents_ids_.find(index);
+
+        if (it_doc_pos == documents_ids_.end())
+            return;
+        // map<int, map<string, double>> words_freqs_by_documents_ -> word : string
+        for (const auto& [word, _] : words_freqs_by_documents_.at(index)) {
+            // map<string, map<int, double>> word_to_document_freqs_ -> (erase - int)
+            word_to_document_freqs_.at(word).erase(index);
+        }
+        documents_ids_.erase(it_doc_pos);
+        documents_.erase(index);
+        words_freqs_by_documents_.erase(index);
+*/
