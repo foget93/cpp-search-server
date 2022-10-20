@@ -177,20 +177,21 @@ void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int index) {
     if (it_doc_pos == documents_ids_.end())
         return;
 
-    std::vector<const std::string*> pointers;
 
     auto& words_freqs = words_freqs_by_documents_.at(index);
+    std::vector<const std::string* >  pointers_to_strs(words_freqs.size());
 
-    std::transform(
+    std::transform(std::execution::par,
                    words_freqs.begin(), words_freqs.end(),
-                   pointers.begin(),
-                   [](std::pair<const std::string, double>& word_freq){
+                   pointers_to_strs.begin(),
+                   [](const auto& word_freq){//const auto& [word,_] not worked!!!!!????????????????????????S
                         return &(word_freq.first);
                     });
+
     std::for_each(policy,
-                  pointers.begin(), pointers.end(),
-                  [&](auto& pword) { // [word,_] not worked
-                        word_to_document_freqs_.at(*pword).erase(index);
+                  pointers_to_strs.begin(), pointers_to_strs.end(),
+                  [&](const auto& ptr_word) {
+                        word_to_document_freqs_.at(*ptr_word).erase(index);
                     });
 
     documents_ids_.erase(it_doc_pos);
