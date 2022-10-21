@@ -176,7 +176,7 @@ int main() {
     }*/
 
     // removed
-    SearchServer search_server("and with"s);
+    /*SearchServer search_server("and with"s);
 
        int id = 0;
        for (
@@ -208,8 +208,8 @@ int main() {
        // многопоточная версия
        search_server.RemoveDocument(execution::par, 2);
        report();
+*/
 
-/*
     mt19937 generator;
 
     const auto dictionary = GenerateDictionary(generator, 10'000, 25);
@@ -230,7 +230,7 @@ int main() {
         }
 
         TEST(par);
-    }*/
+    }
     return 0;
 }
 
