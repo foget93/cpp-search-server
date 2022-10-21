@@ -18,3 +18,4 @@ std::vector<std::string> SplitIntoWords(const std::string& text) {
     } //last word
     return words;
 } //string to vector<string> ->" "
+//transform_reduce....))) ' '+char

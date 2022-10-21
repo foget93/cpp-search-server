@@ -67,22 +67,7 @@ using namespace std::literals;
         }
         return {matched_words, documents_.at(document_id).status};
     }
-// -------5 sprint delete----------
-/*  int SearchServer::GetDocumentId(int index) const {
-        if (index > static_cast<int>(documents_.size()) || index < 0)
-            throw std::out_of_range("индекс переданного документа выходит за пределы допустимого диапазона [0; количество документов).");
 
-        int local_index = 0;
-        for (const auto& document : documents_) {
-            if (local_index == index)
-                return document.first;
-            local_index++;
-        }
-        return -1; // для тестовой системы (не должно дойти)
-        //метод at бросает исключение out_of_range =)
-    }
-*/
-// -------5 sprint delete----------
     bool SearchServer::IsValidWord(const std::string& word) {
         // A valid word must not contain special characters
         return std::none_of(word.begin(), word.end(), [](char c) {
