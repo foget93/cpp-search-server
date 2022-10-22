@@ -185,9 +185,9 @@ void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int index) {
 
 
     auto& words_freqs = words_freqs_by_documents_.at(index);
-    std::vector<const std::string* >  p_strs(words_freqs.size());
+    std::vector<const std::string*>  p_strs(words_freqs.size());
 
-    std::transform(std::execution::par,
+    std::transform(policy/*std::execution::par*/,
                    words_freqs.begin(), words_freqs.end(),
                    p_strs.begin(),
                    [](const auto& word_freq){//const auto& [word,_] not worked!!!!!????????????????????????S
@@ -205,31 +205,12 @@ void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int index) {
     words_freqs_by_documents_.erase(index);
 }
 
-/*    SearchServer::Query SearchServer::ParseQuery(const std::string& text) const {
-        Query query;
-        for (const std::string& word : SplitIntoWords(text)) {
-            const QueryWord query_word = ParseQueryWord(word);
-            if (!query_word.is_stop) {
-                if (query_word.is_minus) {
-                    query.minus_words.insert(query_word.data);
-                } else {
-                    query.plus_words.insert(query_word.data);
-                }
-            }
-        }
-        return query;
-    }
-
-    struct Query {
-        std::set<std::string> plus_words;
-        std::set<std::string> minus_words;
-    };*/
 template <typename ExecutionPolicy>
 SearchServer::DataAfterMatching SearchServer::MatchDocument(ExecutionPolicy&& policy, const std::string& raw_query, int document_id) const {
     using namespace std::execution;
-
-    std::vector<std::string> plus_words;
-    std::vector<std::string> minus_words;
+    //Query query = ParseQuery(raw_query);
+    std::vector<std::string> plus_words;//{std::make_move_iterator(query.plus_words.begin()), std::make_move_iterator(query.plus_words.end())};
+    std::vector<std::string> minus_words;//{std::make_move_iterator(query.minus_words.begin()), std::make_move_iterator(query.minus_words.end())};
 
     for (const std::string& word : SplitIntoWords(raw_query)) {
         const QueryWord query_word = ParseQueryWord(word);
@@ -248,8 +229,9 @@ SearchServer::DataAfterMatching SearchServer::MatchDocument(ExecutionPolicy&& po
     };
 
     //check minus
-    if (std::any_of(policy, minus_words.begin(), minus_words.end(), word_checker))
+    if (std::any_of(policy, minus_words.begin(), minus_words.end(), word_checker)) {
         return {std::vector<std::string> {}, documents_.at(document_id).status};
+    }
 
     std::vector<std::string> matched_words(plus_words.size());
 
@@ -258,23 +240,10 @@ SearchServer::DataAfterMatching SearchServer::MatchDocument(ExecutionPolicy&& po
                       return word_checker(word);
                   });
 
-//    std::vector<std::string> matched_words;
-
-//    std::for_each(policy, plus_words.begin(), plus_words.end(),
-//                  [this, &matched_words, &word_checker](const std::string& word) {
-//                      if(word_checker(word)) {
-//                          matched_words.push_back(word);
-//                      };
-//                  });
-
-
     //  Remove duplicates
     std::sort(policy, matched_words.begin(), matched_words.end());
     auto last = std::unique(policy, matched_words.begin(), matched_words.end());
     matched_words.erase(last, matched_words.end());
-
-
-
 
     return {matched_words, documents_.at(document_id).status};
 }
