@@ -18,9 +18,6 @@ class SearchServer {
 public:
 
     using DataAfterMatching = std::tuple<std::vector<std::string>, DocumentStatus>;
-    // Defines an invalid document id
-    // You can refer to this constant as SearchServer::INVALID_DOCUMENT_ID
-    //inline static constexpr int INVALID_DOCUMENT_ID = -1;
 
     SearchServer() = default; // старые тесты без стоп слов
 
@@ -29,6 +26,9 @@ public:
 
     explicit SearchServer(const std::string& stop_words_text)
         : SearchServer(SplitIntoWords(stop_words_text)) {} // Invoke delegating constructor from string container
+
+//    explicit SearchServer(std::string_view stop_words_text)
+//        : SearchServer(SplitIntoWords(stop_words_text)) {}
 
     void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
 
@@ -99,8 +99,8 @@ private:
 
     Query ParseQuery(const std::string& text) const ; //разбиваем на +- слова
 
-    template <typename ExecutionPolicy>
-    Query ParseQuery(ExecutionPolicy&& policy, const std::string& text) const;
+//    template <typename ExecutionPolicy>
+//    Query ParseQuery(ExecutionPolicy&& policy, const std::string& text) const;
 
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
 
@@ -205,57 +205,6 @@ void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int index) {
     words_freqs_by_documents_.erase(index);
 }
 
-template <typename ExecutionPolicy>
-SearchServer::Query SearchServer::ParseQuery(ExecutionPolicy&& policy, const std::string& text) const {
-    using namespace std::execution;
-    Query query;
-    for (const std::string& word : SplitIntoWords(text)) {
-        const QueryWord query_word = ParseQueryWord(word);
-        if (!query_word.is_stop) {
-            if (query_word.is_minus) {
-                query.minus_words.insert(query_word.data);
-            } else {
-                query.plus_words.insert(query_word.data);
-            }
-        }
-    }
-    return query;
-//    Query query;
-//    const std::vector<std::string> words =  SplitIntoWords(text);
-//    std::vector<QueryWord> query_words(words.size());
-
-//    std::transform(policy,
-//                   words.begin(), words.end(),
-//                   query_words.begin(),
-//                   [&](const std::string& word){
-//                        return std::move(ParseQueryWord(word));
-//                     });
-
-//    for (const auto& query_word : query_words) {
-//        if (!query_word.is_stop) {
-//            if (query_word.is_minus) {
-//                query.minus_words.insert(query_word.data);
-//            } else {
-//                query.plus_words.insert(query_word.data);
-//            }
-//        }
-//    }
-    /*//почему не работает с par
-    std::for_each(policy,
-                  query_words.begin(), query_words.end(),
-                  [&](const QueryWord& query_word){
-                        if (!query_word.is_stop) {
-                            if (query_word.is_minus) {
-                                query.minus_words.insert(query_word.data);
-                            } else {
-                                query.plus_words.insert(query_word.data);
-                            }
-                        }
-                    });*/
-
-
-    return query;
-}
 /*    SearchServer::Query SearchServer::ParseQuery(const std::string& text) const {
         Query query;
         for (const std::string& word : SplitIntoWords(text)) {
@@ -269,58 +218,68 @@ SearchServer::Query SearchServer::ParseQuery(ExecutionPolicy&& policy, const std
             }
         }
         return query;
-    } //разбиваем на +- слова*/
+    }
 
+    struct Query {
+        std::set<std::string> plus_words;
+        std::set<std::string> minus_words;
+    };*/
 template <typename ExecutionPolicy>
-SearchServer::DataAfterMatching SearchServer::MatchDocument(ExecutionPolicy&& policy, const std::string& raw_query, int document_id) const{
-     using namespace std::execution;
+SearchServer::DataAfterMatching SearchServer::MatchDocument(ExecutionPolicy&& policy, const std::string& raw_query, int document_id) const {
+    using namespace std::execution;
 
-     const Query query = ParseQuery(policy, raw_query);  //мб сдедать паралельную версию ParseQuery +
-     std::vector<std::string> matched_words;
+    std::vector<std::string> plus_words;
+    std::vector<std::string> minus_words;
 
-     for (const std::string& word : query.plus_words) {
-         if (word_to_document_freqs_.count(word) == 0) {
-             continue;
-         }
-         if (word_to_document_freqs_.at(word).count(document_id)) {
-             matched_words.push_back(word);
-         }
-     }
+    for (const std::string& word : SplitIntoWords(raw_query)) {
+        const QueryWord query_word = ParseQueryWord(word);
+        if (!query_word.is_stop) {
+            if (query_word.is_minus) {
+                minus_words.push_back(query_word.data);
+            } else {
+                plus_words.push_back(query_word.data);
+            }
+        }
+    }
 
-     for (const std::string& word : query.minus_words) {
-         if (word_to_document_freqs_.count(word) == 0) {
-             continue;
-         }
-         if (word_to_document_freqs_.at(word).count(document_id)) {
-             matched_words.clear();
-             break;
-         }
-     }
-     return {matched_words, documents_.at(document_id).status};
+    const auto word_checker = [this, document_id](const std::string& word) {
+        const auto position = word_to_document_freqs_.find(word);
+        return position != word_to_document_freqs_.end() && position->second.count(document_id);
+    };
+
+    //check minus
+    if (std::any_of(policy, minus_words.begin(), minus_words.end(), word_checker))
+        return {std::vector<std::string> {}, documents_.at(document_id).status};
+
+    std::vector<std::string> matched_words(plus_words.size());
+
+    std::copy_if(policy, plus_words.begin(), plus_words.end(), matched_words.begin(),
+                  [this, &matched_words, &word_checker](const std::string& word) {
+                      return word_checker(word);
+                  });
+
+//    std::vector<std::string> matched_words;
+
+//    std::for_each(policy, plus_words.begin(), plus_words.end(),
+//                  [this, &matched_words, &word_checker](const std::string& word) {
+//                      if(word_checker(word)) {
+//                          matched_words.push_back(word);
+//                      };
+//                  });
+
+
+    //  Remove duplicates
+    std::sort(policy, matched_words.begin(), matched_words.end());
+    auto last = std::unique(policy, matched_words.begin(), matched_words.end());
+    matched_words.erase(last, matched_words.end());
+
+
+
+
+    return {matched_words, documents_.at(document_id).status};
 }
 /*
  *  func return tuple<vector<string>, DocumentStatus>
  *
-    const Query query = ParseQuery(raw_query); // исключения бросаются в ParseQueryWord
-    std::vector<std::string> matched_words;
 
-    for (const std::string& word : query.plus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        if (word_to_document_freqs_.at(word).count(document_id)) {
-            matched_words.push_back(word);
-        }
-    }
-
-    for (const std::string& word : query.minus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        if (word_to_document_freqs_.at(word).count(document_id)) {
-            matched_words.clear();
-            break;
-        }
-    }
-    return {matched_words, documents_.at(document_id).status};
 */

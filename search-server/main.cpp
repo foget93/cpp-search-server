@@ -292,7 +292,7 @@ int main() {
         TEST(par);
     }*/
     // =====================================================MatchDocument=========================================================
- /*   SearchServer search_server("and with"s);
+    /*SearchServer search_server("and with"s);
 
     int id = 0;
     for (
@@ -325,8 +325,8 @@ int main() {
         const auto [words, status] = search_server.MatchDocument(execution::par, query, 3);
         cout << words.size() << " words for document 3"s << endl;
         // 0 words for document 3
-    }*/
-
+    }
+*/
     mt19937 generator;
 
     const auto dictionary = GenerateDictionary(generator, 1000, 10);
