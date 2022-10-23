@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <utility>
 
+#include <functional>
+
 #include "document.h"
 #include "string_processing.h"
 #include <execution>
@@ -40,10 +42,13 @@ public:
 
     int GetDocumentCount() const;
 
+    DataAfterMatching MatchDocument(std::execution::sequenced_policy,const std::string& raw_query, int document_id) const {
+        return MatchDocument(raw_query, document_id);}
+
     DataAfterMatching MatchDocument(const std::string& raw_query, int document_id) const;
 
     template <typename ExecutionPolicy>
-    DataAfterMatching MatchDocument(ExecutionPolicy&& policy, const std::string& raw_query, int document_id) const;
+    DataAfterMatching MatchDocument(ExecutionPolicy&& parallel_policy, const std::string& raw_query, int document_id) const;
 
     //int GetDocumentId(int index) const; //- отказ 5 спринт
     const std::map<std::string, double> &GetWordFrequencies(int index) const;
@@ -98,9 +103,6 @@ private:
     };
 
     Query ParseQuery(const std::string& text) const ; //разбиваем на +- слова
-
-//    template <typename ExecutionPolicy>
-//    Query ParseQuery(ExecutionPolicy&& policy, const std::string& text) const;
 
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
 
@@ -205,50 +207,54 @@ void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int index) {
     words_freqs_by_documents_.erase(index);
 }
 
+
 template <typename ExecutionPolicy>
-SearchServer::DataAfterMatching SearchServer::MatchDocument(ExecutionPolicy&& policy, const std::string& raw_query, int document_id) const {
+SearchServer::DataAfterMatching SearchServer::MatchDocument(ExecutionPolicy&& parallel_policy , const std::string& raw_query, int document_id) const {
     using namespace std::execution;
-    //Query query = ParseQuery(raw_query);
-    std::vector<std::string> plus_words;//{std::make_move_iterator(query.plus_words.begin()), std::make_move_iterator(query.plus_words.end())};
-    std::vector<std::string> minus_words;//{std::make_move_iterator(query.minus_words.begin()), std::make_move_iterator(query.minus_words.end())};
+
+    std::vector<std::string> plus_words;
+    std::vector<std::string> minus_words;
+
 
     for (const std::string& word : SplitIntoWords(raw_query)) {
-        const QueryWord query_word = ParseQueryWord(word);
-        if (!query_word.is_stop) {
-            if (query_word.is_minus) {
-                minus_words.push_back(query_word.data);
-            } else {
-                plus_words.push_back(query_word.data);
-            }
-        }
+      const QueryWord query_word = ParseQueryWord(word);
+      if (!query_word.is_stop) {
+          if (query_word.is_minus) {
+              minus_words.push_back(query_word.data);
+          } else {
+              plus_words.push_back(query_word.data);
+          }
+      }
     }
 
-    const auto word_checker = [this, document_id](const std::string& word) {
-        const auto position = word_to_document_freqs_.find(word);
-        return position != word_to_document_freqs_.end() && position->second.count(document_id);
+    const auto ckeck_word = [this, document_id](const std::string& word) {
+        const auto pos = word_to_document_freqs_.find(word);
+        return pos != word_to_document_freqs_.end() && pos->second.count(document_id);
     };
 
     //check minus
-    if (std::any_of(policy, minus_words.begin(), minus_words.end(), word_checker)) {
+    if (std::any_of(parallel_policy, minus_words.begin(), minus_words.end(), ckeck_word)) {
         return {std::vector<std::string> {}, documents_.at(document_id).status};
     }
 
     std::vector<std::string> matched_words(plus_words.size());
 
-    std::copy_if(policy, plus_words.begin(), plus_words.end(), matched_words.begin(),
-                  [this, &matched_words, &word_checker](const std::string& word) {
-                      return word_checker(word);
-                  });
+    auto it_end_cpy =
+          std::copy_if(parallel_policy, plus_words.begin(), plus_words.end(),
+                      matched_words.begin(),
+                      [this, &matched_words, &ckeck_word](const std::string& word) {
+                           return ckeck_word(word);
+                      });
 
-    //  Remove duplicates
-    std::sort(policy, matched_words.begin(), matched_words.end());
-    auto last = std::unique(policy, matched_words.begin(), matched_words.end());
+    matched_words.resize(std::distance(matched_words.begin(),it_end_cpy));
+
+//  Remove duplicates
+    std::sort(parallel_policy, matched_words.begin(), matched_words.end());
+    auto last = std::unique(parallel_policy, matched_words.begin(), matched_words.end());
     matched_words.erase(last, matched_words.end());
 
     return {matched_words, documents_.at(document_id).status};
 }
 /*
  *  func return tuple<vector<string>, DocumentStatus>
- *
-
 */
