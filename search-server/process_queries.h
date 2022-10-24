@@ -1,7 +1,7 @@
 #pragma once
 
 #include "search_server.h"
-#include <list>
+//#include <list>
 
 std::vector<std::vector<Document>>ProcessQueries ( const SearchServer& search_server,
                                                    const std::vector<std::string>& queries);
@@ -9,6 +9,7 @@ std::vector<std::vector<Document>>ProcessQueries ( const SearchServer& search_se
 std::vector<Document> ProcessQueriesJoined( const SearchServer& search_server,
                                             const std::vector<std::string>& queries);
 
+/*
 std::list<Document> ProcessQueriesJoined_list( const SearchServer& search_server,
                                             const std::vector<std::string>& queries);
 
@@ -19,3 +20,4 @@ std::vector<std::vector<Document>>TrivialProcessQueries ( const SearchServer& se
 
 std::vector<Document> TrivialProcessQueriesJoined( const SearchServer& search_server,
                                             const std::vector<std::string>& queries);
+*/

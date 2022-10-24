@@ -34,6 +34,7 @@ std::vector<Document> ProcessQueriesJoined( const SearchServer& search_server,
     return result;
 }
 // ================try_for_yourself=============================
+/*
 std::list<Document> ProcessQueriesJoined_list( const SearchServer& search_server,
                                                const std::vector<std::string>& queries){
     auto responses = ProcessQueries(search_server, queries);
@@ -88,4 +89,4 @@ std::vector<Document> TrivialProcessQueriesJoined( const SearchServer& search_se
         }
     }
     return result;// ssss
-}
+}*/

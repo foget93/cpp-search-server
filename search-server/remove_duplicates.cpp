@@ -1,4 +1,4 @@
-#include "remove_duplicates.h"
+/*#include "remove_duplicates.h"
 
 void RemoveDuplicates(SearchServer &search_server) {
     std::map<std::set<std::string>, int> words_ids;
@@ -28,3 +28,4 @@ void RemoveDuplicates(SearchServer &search_server) {
         std::cout << "Found duplicate document id " << index << std::endl;
     }
 }
+*/

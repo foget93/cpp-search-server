@@ -292,7 +292,7 @@ int main() {
         TEST(par);
     }*/
     // =====================================================MatchDocument=========================================================
-  /*  SearchServer search_server("and with"s);
+  /*  SearchServer search_server("and with"sv);
 
     int id = 0;
     for (
@@ -327,6 +327,13 @@ int main() {
         // 0 words for document 3
     }
 */
+//    std::string_view sv {"ss  sfasfasf afsasfg hdsh awq"sv};
+
+//    for (auto word : SplitIntoWords(sv)) {
+//        cout << word << endl;
+//    }
+
+
     mt19937 generator;
 
     const auto dictionary = GenerateDictionary(generator, 1000, 10);
