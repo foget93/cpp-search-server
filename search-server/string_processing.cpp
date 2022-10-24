@@ -31,7 +31,7 @@ std::vector<std::string_view> SplitIntoWords(std::string_view str) {
 
     while (/*pos != pos_end*/!str.empty()) {
         int64_t space = str.find(' ');
-        result.push_back(space == pos_end ? str : str.substr(0, space));
+        result.push_back(space == pos_end ? str.substr(0) : str.substr(0, space));
         str.remove_prefix(std::min(str.find_first_not_of(" ", space), str.size()));
     }
 

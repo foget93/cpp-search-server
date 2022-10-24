@@ -44,28 +44,6 @@ using namespace std::literals;
     }
 
     SearchServer::DataAfterMatching SearchServer::MatchDocument(std::string_view raw_query, int document_id) const {
-        /*const Query query = ParseQuery(raw_query); // исключения бросаются в ParseQueryWord
-        std::vector<std::string_view> matched_words;
-
-        for (std::string_view word : query.plus_words) {
-            if (word_to_document_freqs_.count(word) == 0) {
-                continue;
-            }
-            if (word_to_document_freqs_.at(std::string(word)).count(document_id)) {
-                matched_words.push_back(std::string(word));
-            }
-        }
-
-        for (std::string_view word : query.minus_words) {
-            if (word_to_document_freqs_.count(word) == 0) {
-                continue;
-            }
-            if (word_to_document_freqs_.at(std::string(word)).count(document_id)) {
-                matched_words.clear();
-                break;
-            }
-        }
-        return {matched_words, documents_.at(document_id).status};*/
         const Query query = ParseQuery(raw_query);
             std::vector<std::string_view> matched_words;
             matched_words.reserve(query.plus_words.size() + query.minus_words.size());
@@ -89,17 +67,56 @@ using namespace std::literals;
                     break;
                 }
             }
-
             return {matched_words, documents_.at(document_id).status};
     }
 
-//    bool SearchServer::IsValidWord(const std::string& word) {
-//        // A valid word must not contain special characters
-//        return std::none_of(word.begin(), word.end(), [](char c) {
-//            return c >= '\0' && c < ' ';
-//        });
-//    }
+    SearchServer::DataAfterMatching SearchServer::MatchDocument(std::execution::parallel_policy, std::string_view raw_query, int document_id) const {
+        using namespace std::execution;
 
+        std::vector<std::string_view> plus_words;
+        std::vector<std::string_view> minus_words;
+
+        //std::vector<std::string_view> words = SplitIntoWords(raw_query);
+        for (std::string_view word : SplitIntoWords(raw_query)) {
+          const QueryWord query_word = ParseQueryWord(word);
+          if (!query_word.is_stop) {
+              if (query_word.is_minus) {
+                  minus_words.push_back(query_word.data);
+              } else {
+                  plus_words.push_back(query_word.data);
+              }
+          }
+        }
+
+        const auto ckeck_word = [this, document_id](std::string_view word) {
+            const auto pos = word_to_document_freqs_.find(word);
+            return pos != word_to_document_freqs_.end() && pos->second.count(document_id);
+        };
+
+        //check minus
+        if (std::any_of(std::execution::par, minus_words.begin(), minus_words.end(), ckeck_word)) {
+            return {std::vector<std::string_view> {}, documents_.at(document_id).status};
+        }
+
+        //std::vector<std::string> matched_words(plus_words.size());
+        std::vector<std::string_view> matched_words(plus_words.size());
+
+        auto it_end_cpy =
+              std::copy_if(std::execution::par, plus_words.begin(), plus_words.end(),
+                          matched_words.begin(),
+                          [&ckeck_word](std::string_view word) {
+                               return ckeck_word(word);
+                          });
+
+        matched_words.resize(std::distance(matched_words.begin(), it_end_cpy));
+
+    //  Remove duplicates
+        std::sort(std::execution::par, matched_words.begin(), matched_words.end());
+        auto last = std::unique(std::execution::par, matched_words.begin(), matched_words.end());
+        matched_words.erase(last, matched_words.end());
+
+        return {matched_words, documents_.at(document_id).status};
+    }
     bool SearchServer::IsValidWord(std::string_view word) {
         // A valid word must not contain special characters
         return std::none_of(word.begin(), word.end(), [](char c) {
@@ -153,12 +170,20 @@ using namespace std::literals;
             const QueryWord query_word = ParseQueryWord(word);
             if (!query_word.is_stop) {
                 if (query_word.is_minus) {
-                    query.minus_words.insert(query_word.data);
+                    query.minus_words.push_back(query_word.data);
                 } else {
-                    query.plus_words.insert(query_word.data);
+                    query.plus_words.push_back(query_word.data);
                 }
             }
         }
+
+        std::sort(query.plus_words.begin(), query.plus_words.end());
+        query.plus_words.erase(std::unique(query.plus_words.begin(), query.plus_words.end()), query.plus_words.end());
+
+        std::sort(query.minus_words.begin(), query.minus_words.end());
+        query.minus_words.erase(std::unique(query.minus_words.begin(), query.minus_words.end()), query.minus_words.end());
+
+
         return query;
     } //разбиваем на +- слова
 
