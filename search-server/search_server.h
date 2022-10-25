@@ -46,20 +46,15 @@ public:
 
 
     DataAfterMatching MatchDocument(std::string_view raw_query, int document_id) const;
-
-    DataAfterMatching MatchDocument(std::execution::sequenced_policy, std::string_view raw_query, int document_id) const {
-        return MatchDocument(raw_query, document_id);}
-
-    //template <typename ExecutionPolicy>
+    DataAfterMatching MatchDocument(std::execution::sequenced_policy, std::string_view raw_query, int document_id) const;
     DataAfterMatching MatchDocument(std::execution::parallel_policy, std::string_view raw_query, int document_id) const;
 
     //int GetDocumentId(int index) const; //- отказ 5 спринт
     const std::map<std::string_view, double> &GetWordFrequencies(int index) const;
 
     void RemoveDocument(int index);
-
-    template<typename ExecutionPolicy>
-    void RemoveDocument(ExecutionPolicy&& policy, int index);
+    void RemoveDocument(std::execution::sequenced_policy, int index);
+    void RemoveDocument(std::execution::parallel_policy, int index);
 
     std::set<int>::iterator begin();
 
@@ -77,9 +72,10 @@ private:
 
     std::set<std::string, std::less<>> stop_words_;
     std::map<std::string, std::map<int, double>, std::less<>> word_to_document_freqs_; // word -> id документов с word и их idf*tf
+    std::map<int, std::map<std::string_view, double>> words_freqs_by_documents_;
     std::map<int, DocumentData> documents_;  // id + средний рейтинг + статус
     std::set<int> documents_ids_;
-    std::map<int, std::map<std::string_view, double>> words_freqs_by_documents_;
+
     //=======================
 
 
@@ -185,39 +181,6 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query, Documen
     return matched_documents;
 }
 
-template<typename ExecutionPolicy>
-void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int index) {
-    using namespace std::execution;
-
-    auto it_doc_pos = documents_ids_.find(index);
-    if (it_doc_pos == documents_ids_.end())
-        return;
 
 
-    auto& words_freqs = words_freqs_by_documents_.at(index);
-    std::vector<const std::string*>  p_strs(words_freqs.size());
 
-    std::transform(policy/*std::execution::par*/,
-                   words_freqs.begin(), words_freqs.end(),
-                   p_strs.begin(),
-                   [](const auto& word_freq){//const auto& [word,_] not worked!!!!!????????????????????????S
-                        return &(word_freq.first);
-                    });
-
-    std::for_each(policy,
-                  p_strs.begin(), p_strs.end(),
-                  [&](const auto& ptr_word) {
-                        word_to_document_freqs_.at(*ptr_word).erase(index);
-                    });
-
-    documents_ids_.erase(it_doc_pos);
-    documents_.erase(index);
-    words_freqs_by_documents_.erase(index);
-}
-
-
-//template <typename ExecutionPolicy>
-
-/*
- *  func return tuple<vector<string>, DocumentStatus>
-*/

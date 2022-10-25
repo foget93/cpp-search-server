@@ -70,13 +70,15 @@ using namespace std::literals;
             return {matched_words, documents_.at(document_id).status};
     }
 
+    SearchServer::DataAfterMatching SearchServer::MatchDocument(std::execution::sequenced_policy, std::string_view raw_query, int document_id) const {
+        return MatchDocument(raw_query, document_id);}
+
     SearchServer::DataAfterMatching SearchServer::MatchDocument(std::execution::parallel_policy, std::string_view raw_query, int document_id) const {
         using namespace std::execution;
 
         std::vector<std::string_view> plus_words;
         std::vector<std::string_view> minus_words;
 
-        //std::vector<std::string_view> words = SplitIntoWords(raw_query);
         for (std::string_view word : SplitIntoWords(raw_query)) {
           const QueryWord query_word = ParseQueryWord(word);
           if (!query_word.is_stop) {
@@ -210,6 +212,38 @@ using namespace std::literals;
             // map<string, map<int, double>> word_to_document_freqs_ -> (erase - int)
             word_to_document_freqs_.at(std::string(word)).erase(index);
         }
+        documents_ids_.erase(it_doc_pos);
+        documents_.erase(index);
+        words_freqs_by_documents_.erase(index);
+    }
+
+    void SearchServer::RemoveDocument(std::execution::sequenced_policy, int index) {
+        return RemoveDocument(index);
+    }
+
+    void SearchServer::RemoveDocument(std::execution::parallel_policy, int index) {
+
+        auto it_doc_pos = documents_ids_.find(index);
+        if (it_doc_pos == documents_ids_.end())
+            return;
+
+
+        auto& words_freqs = words_freqs_by_documents_.at(index);
+        std::vector<const std::string_view*>  p_strs(words_freqs.size());
+
+        std::transform(std::execution::par,
+                       words_freqs.begin(), words_freqs.end(),
+                       p_strs.begin(),
+                       [](const auto& word_freq){//const auto& [word,_] not worked!!!!!????????????????????????S
+                            return &(word_freq.first);
+                        });
+
+        std::for_each(std::execution::par,
+                      p_strs.begin(), p_strs.end(),
+                      [&](const auto& ptr_word) {
+                            word_to_document_freqs_.at(std::string(*ptr_word)).erase(index);
+                        });
+
         documents_ids_.erase(it_doc_pos);
         documents_.erase(index);
         words_freqs_by_documents_.erase(index);
