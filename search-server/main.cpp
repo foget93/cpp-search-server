@@ -70,9 +70,9 @@ void Test(string_view mark, QueriesProcessor processor, const SearchServer& sear
 
 #define TEST(processor) Test(#processor, processor, search_server, queries)
 */
-/*
+
 // бенчмарк на удаление========================================================================
-string GenerateWord(mt19937& generator, int max_length) {
+/*string GenerateWord(mt19937& generator, int max_length) {
     const int length = uniform_int_distribution(1, max_length)(generator);
     string word;
     word.reserve(length);
@@ -127,6 +127,7 @@ void Test(string_view mark, SearchServer search_server, ExecutionPolicy&& policy
 #define TEST(mode) Test(#mode, search_server, execution::mode)
 */
 // =MATCHING====
+/**/
 string GenerateWord(mt19937& generator, int max_length) {
     const int length = uniform_int_distribution(1, max_length)(generator);
     string word;
@@ -236,7 +237,7 @@ int main() {
     }*/
 
     // =====================================================RemoveDocument============================================================
-    /*SearchServer search_server("and with"s);
+ /*   SearchServer search_server("and with"s);
 
        int id = 0;
        for (
@@ -327,13 +328,9 @@ int main() {
         // 0 words for document 3
     }
 */
-//    std::string_view sv {"ss  sfasfasf afsasfg hdsh awq"sv};
-
-//    for (auto word : SplitIntoWords(sv)) {
-//        cout << word << endl;
-//    }
 
 
+/*matching*/
     mt19937 generator;
 
     const auto dictionary = GenerateDictionary(generator, 1000, 10);
@@ -367,6 +364,6 @@ int main() {
     TEST(par);
 */
 
-    //return 0;
+    return 0;
 }
 

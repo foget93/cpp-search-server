@@ -20,8 +20,12 @@ using namespace std::literals;
         const std::vector<std::string_view> words = SplitIntoWordsNoStop(document);
         const double step = 1.0 / words.size();
         for (std::string_view word : words) {
+            /*word_to_document_freqs_[std::string(word)][document_id] += step;
+            words_freqs_by_documents_[document_id][std::string(word)] += step;*/
             word_to_document_freqs_[std::string(word)][document_id] += step;
-            words_freqs_by_documents_[document_id][std::string(word)] += step;
+
+            const auto position = word_to_document_freqs_.find(word);
+            words_freqs_by_documents_[document_id][position->first] += step;
         }
         // example: words = "hello little cat", частота слова cat для этого документа 1/3;(for TF)
         // map<string, map<int, double>> word_to_document_freqs_;
@@ -210,11 +214,25 @@ using namespace std::literals;
         // map<int, map<string, double>> words_freqs_by_documents_ -> word : string
         for (const auto& [word, _] : words_freqs_by_documents_.at(index)) {
             // map<string, map<int, double>> word_to_document_freqs_ -> (erase - int)
+
             word_to_document_freqs_.at(std::string(word)).erase(index);
         }
+
         documents_ids_.erase(it_doc_pos);
         documents_.erase(index);
         words_freqs_by_documents_.erase(index);
+//        auto document_position = documents_ids_.find(index);
+//        if (document_position == documents_ids_.end())
+//            return;
+//        documents_ids_.erase(document_position);
+
+//        for (auto [word, _] : words_freqs_by_documents_.at(index)) {
+//            auto position = word_to_document_freqs_.find(word);
+//            position->second.erase(index);
+//        }
+
+//        documents_.erase(index);
+//        words_freqs_by_documents_.erase(index);
     }
 
     void SearchServer::RemoveDocument(std::execution::sequenced_policy, int index) {
