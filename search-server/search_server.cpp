@@ -34,7 +34,9 @@ using namespace std::literals;
         documents_ids_.insert(document_id);
     }
 
-
+    std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query, DocumentStatus status) const {
+        return FindTopDocuments(std::execution::seq, raw_query, status);
+    }
 
     int SearchServer::GetDocumentCount() const {
         return static_cast<int>(documents_.size());

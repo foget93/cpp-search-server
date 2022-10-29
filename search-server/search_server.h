@@ -16,7 +16,7 @@
 #include "concurrent_map.h"
 //using
 
-const int MAX_RESULT_DOCUMENT_COUNT {5};
+const size_t MAX_RESULT_DOCUMENT_COUNT {5};
 
 class SearchServer {
 public:
@@ -45,21 +45,9 @@ public:
 
     template <typename ExecutionPolicy>
     std::vector<Document> FindTopDocuments(const ExecutionPolicy& policy,
-                                           std::string_view raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const {
-            return FindTopDocuments(
-                                    policy,
-                                    raw_query,
-                                    [status]
-                                    ([[maybe_unused]]int document_id, DocumentStatus status_predicate, [[maybe_unused]] int rating )
-                                    { return status == status_predicate; }
-                                   );
+                                           std::string_view raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const;
 
-    }
-
-    std::vector<Document> FindTopDocuments(std::string_view raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const {
-        return FindTopDocuments(std::execution::seq, raw_query, status);
-    }
-    // 3 перегрузка не нужна(значение по умолчанию status = DocumentStatus::ACTUAL)
+    std::vector<Document> FindTopDocuments(std::string_view raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const;
 
     int GetDocumentCount() const;
 
@@ -93,9 +81,7 @@ private:
 
     //=======================
 
-
     static bool IsValidWord(std::string_view word);
-
 
     bool IsStopWord(std::string_view word) const;
 
@@ -110,8 +96,6 @@ private:
     };
 
     struct Query {
-//        std::set<std::string_view> plus_words;
-//        std::set<std::string_view> minus_words;
         std::vector<std::string_view> plus_words;
         std::vector<std::string_view> minus_words;
     };
@@ -121,12 +105,11 @@ private:
     QueryWord ParseQueryWord(std::string_view text) const; // mb bool
 
     double ComputeWordInverseDocumentFreq(std::string_view word) const;
-//new
+
     template <typename ExecutionPolicy, typename DocumentPredicate>
     std::vector<Document> FindAllDocuments(const ExecutionPolicy& policy,
                                            const Query& query, DocumentPredicate document_predicate) const;
 
-//old
     template <typename DocumentPredicate>
     std::vector<Document> FindAllDocuments(const Query& query, DocumentPredicate document_predicate) const;
 
@@ -176,7 +159,19 @@ std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query,
     return FindTopDocuments(std::execution::seq, raw_query, document_predicate);
 }
 
-//new
+template <typename ExecutionPolicy>
+std::vector<Document> SearchServer::FindTopDocuments(const ExecutionPolicy& policy,
+                                       std::string_view raw_query, DocumentStatus status) const {
+        return FindTopDocuments(
+                                policy,
+                                raw_query,
+                                [status]
+                                ([[maybe_unused]]int document_id, DocumentStatus status_predicate, [[maybe_unused]] int rating )
+                                { return status == status_predicate; }
+                               );
+
+}
+
 template <typename ExecutionPolicy, typename DocumentPredicate>
 std::vector<Document> SearchServer::FindAllDocuments(const ExecutionPolicy& policy,
                                        const Query& query, DocumentPredicate document_predicate) const {
@@ -218,7 +213,7 @@ std::vector<Document> SearchServer::FindAllDocuments(const ExecutionPolicy& poli
         return matched_documents;
 
     } else { // std::execution::parallel_policy
-        size_t available_cores = std::thread::hardware_concurrency();
+        size_t available_cores = std::thread::hardware_concurrency() * 10u;
         ConcurrentMap<int, double> concurent_document_to_relevance(available_cores);
 
         auto insert_freq_func = [this, &document_predicate, &concurent_document_to_relevance]
@@ -241,7 +236,7 @@ std::vector<Document> SearchServer::FindAllDocuments(const ExecutionPolicy& poli
         auto erase_minus_func = [this, &concurent_document_to_relevance]
                                 (std::string_view word) {
             const auto word_pos = word_to_document_freqs_.find(word);
-            if (word_pos != word_to_document_freqs_.end()) {//
+            if (word_pos != word_to_document_freqs_.end()) {
                 for (const auto [document_id, _] : word_pos->second) {
                     concurent_document_to_relevance.erase(static_cast<size_t>(document_id));
                 }
@@ -262,7 +257,7 @@ std::vector<Document> SearchServer::FindAllDocuments(const ExecutionPolicy& poli
         return matched_documents;
     }
 }
-//old
+
 template <typename DocumentPredicate>
 std::vector<Document> SearchServer::FindAllDocuments(const Query& query, DocumentPredicate document_predicate) const {
     return FindAllDocuments(std::execution::seq, query, document_predicate);
