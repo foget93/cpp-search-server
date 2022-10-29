@@ -24,8 +24,8 @@ using namespace std::literals;
             words_freqs_by_documents_[document_id][std::string(word)] += step;*/
             word_to_document_freqs_[std::string(word)][document_id] += step;
 
-            const auto position = word_to_document_freqs_.find(word);
-            words_freqs_by_documents_[document_id][position->first] += step;
+            const auto pos = word_to_document_freqs_.find(word);
+            words_freqs_by_documents_[document_id][pos->first] += step;
         }
         // example: words = "hello little cat", частота слова cat для этого документа 1/3;(for TF)
         // map<string, map<int, double>> word_to_document_freqs_;
@@ -34,14 +34,7 @@ using namespace std::literals;
         documents_ids_.insert(document_id);
     }
 
-    std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query, DocumentStatus status) const {
 
-        return FindTopDocuments(raw_query,
-                                [status]
-                                ([[maybe_unused]]int document_id, DocumentStatus status_predicate, [[maybe_unused]] int rating )
-                                { return status == status_predicate; }
-                               );
-    }
 
     int SearchServer::GetDocumentCount() const {
         return static_cast<int>(documents_.size());

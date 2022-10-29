@@ -131,7 +131,7 @@ void TestFilterWithPredicate() {
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s,       DocumentStatus::ACTUAL, {7, 2, 7});
     search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, {5, -12, 2, 1});
     search_server.AddDocument(3, "ухоженный скворец евгений"s,         DocumentStatus::BANNED, {9});
-    const auto found_docs = search_server.FindTopDocuments("пушистый ухоженный кот"s,
+    const auto found_docs = search_server.FindTopDocuments("пушистый ухоженный кот"sv,
                                                            [](int document_id, [[maybe_unused]]DocumentStatus status, [[maybe_unused]]int rating) {
                                                            return document_id % 2 == 0; });
     for (const Document& document : found_docs) {

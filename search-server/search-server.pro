@@ -17,6 +17,7 @@ SOURCES += \
         unit_tests.cpp
 
 HEADERS += \
+    concurrent_map.h \
     document.h \
     log_duration.h \
     paginator.h \
