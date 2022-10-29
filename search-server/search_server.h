@@ -122,7 +122,7 @@ SearchServer::SearchServer(const StringContainer& stop_words)
     : stop_words_(MakeUniqueNonEmptyStrings(stop_words))
 {
     if (std::any_of(stop_words_.cbegin(), stop_words_.cend(),
-              [](const std::string& word){ return !IsValidWord(word); } )) {
+                [](const std::string& word){ return !IsValidWord(word); } )) { // при применении none_of - не проходит проверку в тренажере, возможно изза IsValidWord(string_view)
         throw std::invalid_argument("Стоп-слово содержит недопустимые символы!");
     } // https://en.cppreference.com/w/cpp/algorithm/all_any_none_of
 }
@@ -178,39 +178,7 @@ std::vector<Document> SearchServer::FindAllDocuments(const ExecutionPolicy& poli
     if constexpr
         (std::is_same_v<ExecutionPolicy, std::execution::sequenced_policy>) {
 
-        std::map<int, double> document_to_relevance; // key: id, value: relevance
-
-        for (std::string_view word : query.plus_words) {
-            //const auto word_pos = word_to_document_freqs_.find(word);
-            if (word_to_document_freqs_.count(word) == 0) {
-            //if (word_pos == word_to_document_freqs_.end())
-                continue;
-            }
-            const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);// compute IDF
-            for (const auto [document_id, term_freq] : word_to_document_freqs_.at(std::string(word))) {
-                const auto& document_data = documents_.at(document_id);
-                if (document_predicate(document_id, document_data.status, document_data.rating)) {
-                    document_to_relevance[document_id] += term_freq * inverse_document_freq; // idf*TF
-                }
-            }
-        }
-
-        for (std::string_view word : query.minus_words) {
-            if (word_to_document_freqs_.count(word) == 0) {
-                continue;
-            }
-            for (const auto [document_id, _] : word_to_document_freqs_.at(std::string(word))) {
-                document_to_relevance.erase(document_id); // delete for minus word
-            }
-        }
-
-        std::vector<Document> matched_documents;
-        matched_documents.reserve(document_to_relevance.size());
-
-        for (const auto [document_id, relevance] : document_to_relevance) {
-            matched_documents.push_back({document_id, relevance, documents_.at(document_id).rating}); //пушим id, relevance, rating найденных
-        }
-        return matched_documents;
+        return FindAllDocuments(query, document_predicate);
 
     } else { // std::execution::parallel_policy
         size_t available_cores = std::thread::hardware_concurrency() * 10u;
@@ -231,7 +199,12 @@ std::vector<Document> SearchServer::FindAllDocuments(const ExecutionPolicy& poli
             }
         };
 
-        ForEach(policy, query.plus_words, insert_freq_func); // in concurrent_map.h
+        std::for_each(
+                    policy,
+                    query.plus_words.begin(), query.plus_words.end(),
+                    insert_freq_func
+                    );
+
 
         auto erase_minus_func = [this, &concurent_document_to_relevance]
                                 (std::string_view word) {
@@ -243,7 +216,12 @@ std::vector<Document> SearchServer::FindAllDocuments(const ExecutionPolicy& poli
             }
         };
 
-        ForEach(policy, query.minus_words, erase_minus_func); // in concurrent_map.h
+        std::for_each(
+                    policy,
+                    query.minus_words.begin(), query.minus_words.end(),
+                    erase_minus_func
+                    );
+
 
         std::map<int, double> document_to_relevance =
                 concurent_document_to_relevance.BuildOrdinaryMap();
@@ -260,7 +238,39 @@ std::vector<Document> SearchServer::FindAllDocuments(const ExecutionPolicy& poli
 
 template <typename DocumentPredicate>
 std::vector<Document> SearchServer::FindAllDocuments(const Query& query, DocumentPredicate document_predicate) const {
-    return FindAllDocuments(std::execution::seq, query, document_predicate);
+    std::map<int, double> document_to_relevance; // key: id, value: relevance
+
+    for (std::string_view word : query.plus_words) {
+        //const auto word_pos = word_to_document_freqs_.find(word);
+        if (word_to_document_freqs_.count(word) == 0) {
+        //if (word_pos == word_to_document_freqs_.end())
+            continue;
+        }
+        const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);// compute IDF
+        for (const auto [document_id, term_freq] : word_to_document_freqs_.at(std::string(word))) {
+            const auto& document_data = documents_.at(document_id);
+            if (document_predicate(document_id, document_data.status, document_data.rating)) {
+                document_to_relevance[document_id] += term_freq * inverse_document_freq; // idf*TF
+            }
+        }
+    }
+
+    for (std::string_view word : query.minus_words) {
+        if (word_to_document_freqs_.count(word) == 0) {
+            continue;
+        }
+        for (const auto [document_id, _] : word_to_document_freqs_.at(std::string(word))) {
+            document_to_relevance.erase(document_id); // delete for minus word
+        }
+    }
+
+    std::vector<Document> matched_documents;
+    matched_documents.reserve(document_to_relevance.size());
+
+    for (const auto [document_id, relevance] : document_to_relevance) {
+        matched_documents.push_back({document_id, relevance, documents_.at(document_id).rating}); //пушим id, relevance, rating найденных
+    }
+    return matched_documents;
 }
 
 

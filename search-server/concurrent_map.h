@@ -74,44 +74,5 @@ public:
     }
 };
 
-// ====================================ForEach==============================================
 
-template <typename ExecutionPolicy, typename ForwardRange, typename Function>
-void ForEach(const ExecutionPolicy& policy, ForwardRange& range, Function function) {
-    if constexpr (
-            std::is_same_v<ExecutionPolicy, std::execution::sequenced_policy>
-            || std::is_same_v<
-                    typename std::iterator_traits<typename ForwardRange::iterator>::iterator_category,
-                    std::random_access_iterator_tag
-            >
-            ) {
 
-        std::for_each(policy, range.begin(), range.end(), function);
-
-    } else {
-
-        static constexpr int PART_COUNT = 4;
-        const auto part_length = size(range) / PART_COUNT;
-        auto part_begin = range.begin();
-        auto part_end = next(part_begin, part_length);
-
-        std::vector<std::future<void>> futures;
-        for (
-                int i = 0;
-                i < PART_COUNT;
-                ++i,
-                        part_begin = part_end,
-                        part_end = (i == PART_COUNT - 1
-                                    ? range.end()
-                                    : next(part_begin, part_length))
-                ) {
-            futures.push_back(std::async([function, part_begin, part_end] { std::for_each(part_begin, part_end, function); }));
-        }
-
-    }
-}
-
-template <typename ForwardRange, typename Function>
-void ForEach(ForwardRange& range, Function function) {
-    ForEach(std::execution::seq, range, function);
-}

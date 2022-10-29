@@ -39,5 +39,6 @@ Makefile
 
 *.build-search-server-Desktop-Profile/
 *.build-search-server-Desktop-Release/
+build-search-server-Desktop-Profile/
 
 search-server/search-server
